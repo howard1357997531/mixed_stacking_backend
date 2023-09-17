@@ -8,4 +8,5 @@ urlpatterns = [
     path('getWorkOrderData/', views.getWorkOrderData, name="getWorkOrderData"),
     path('aiCalculate/', views.aiCalculate, name="aiCalculate"),
     path('getAiWorkOrderData/', views.getAiWorkOrderData, name="getAiWorkOrderData"),
+    path('uploadCsv/', views.uploadCsv, name="uploadCsv"),
 ]

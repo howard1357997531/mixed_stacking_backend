@@ -179,4 +179,23 @@ def getAiWorkOrderData(request):
     serializer = aiWorkOrderSerializer(ai_order, many=True)
     return Response(serializer.data)
 
+@api_view(['POST'])
+def uploadCsv(request):
+    if 'csv_file' not in request.data:
+        return Response({'message': '請提供有效的 CSV 檔案'})
+    csv_file = request.data['csv_file']
+    csv_file_name = request.data['csv_file_name']
+    print(csv_file)
+    print(type(csv_file_name))
+    csv_data = []
+    try:
+        # 使用 csv.reader 來讀取 CSV 檔案內容
+        csv_reader = csv.reader(csv_file.read().decode('utf-8').splitlines())
+        next(csv_reader)
+        for row in csv_reader:
+            csv_data.append(row)
+    except Exception as e:
+        return Response({'message': 'error'})
+    print(csv_data)
+    return Response({'message': 'CSV 檔案解析成功', 'data': csv_data}, status=200)
 
