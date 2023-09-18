@@ -1,17 +1,21 @@
 from django.shortcuts import render
 from django.conf import settings
 from django.db.models import Max
+from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializer import workOrderSerializer, aiWorkOrderSerializer
-from .models import workOrder, aiWorkOrder
+from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
+from .models import workOrder, aiWorkOrder, Order, OrderItem
 
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
 from .main_result_20230911 import activate_cal
+from io import BytesIO
 import random
+import qrcode
 import pandas as pd
 import time
+import uuid
 import csv
 import os
 
@@ -181,21 +185,57 @@ def getAiWorkOrderData(request):
 
 @api_view(['POST'])
 def uploadCsv(request):
-    if 'csv_file' not in request.data:
-        return Response({'message': '請提供有效的 CSV 檔案'})
-    csv_file = request.data['csv_file']
-    csv_file_name = request.data['csv_file_name']
-    print(csv_file)
-    print(type(csv_file_name))
-    csv_data = []
+    # if 'csv_file' not in request.data:
+    #     return Response({'message': '請提供有效的 CSV 檔案'})
+    csv_file_length = int(request.data.get('csv_file_length'))
+
     try:
-        # 使用 csv.reader 來讀取 CSV 檔案內容
-        csv_reader = csv.reader(csv_file.read().decode('utf-8').splitlines())
-        next(csv_reader)
-        for row in csv_reader:
-            csv_data.append(row)
+        for i in range(csv_file_length):
+            csv_file = request.data.get(f'csv_file{i+1}')
+            csv_name = request.data.get(f'csv_file_name{i+1}').replace('.csv', '')
+            unique_code = uuid.uuid4().hex
+            unique_code_exist = Order.objects.filter(unique_code=unique_code)
+
+            while unique_code_exist:
+                unique_code = uuid.uuid4().hex
+                unique_code_exist = Order.objects.filter(unique_code=unique_code)
+                if unique_code_exist is None:
+                    break
+
+            image = qrcode.make(unique_code)
+            # 将图像保存到模型的ImageField字段
+            image_io = BytesIO()
+            image.save(image_io, 'PNG')
+            image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
+            
+            order = Order.objects.create(
+                name = csv_name,
+                unique_code = unique_code,
+                image = image_content)
+            order.save()
+            
+            # 使用 csv.reader 來讀取 CSV 檔案內容
+            csv_reader = csv.reader(csv_file.read().decode('utf-8').splitlines())
+            next(csv_reader)
+            for reader in csv_reader:
+                OrderItem.objects.create(
+                    order = order,
+                    name = reader[1].replace('外箱', ''),
+                    width = reader[2],
+                    height = reader[3],
+                    depth = reader[4],
+                    count = int(reader[5])
+                )
+            
+
     except Exception as e:
         return Response({'message': 'error'})
-    print(csv_data)
-    return Response({'message': 'CSV 檔案解析成功', 'data': csv_data}, status=200)
+
+    return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
+
+@api_view(['GET'])
+def getOrderData(request):
+    order = Order.objects.all().order_by('-id')
+    serializer = OrderSerializer(order, many=True)
+    return Response(serializer.data)
 

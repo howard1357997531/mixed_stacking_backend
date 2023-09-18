@@ -40,3 +40,22 @@ class aiWorkOrder(Common):
 
     def __str__(self):
         return str(self.name)
+
+class Order(Common):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    unique_code = models.CharField(max_length=255, unique=True, null=False, blank=False)
+    image = models.ImageField(upload_to='qrcode')
+
+    def __str__(self):
+        return self.name
+    
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    width = models.CharField(max_length=255, null=True, blank=True)
+    height = models.CharField(max_length=255, null=True, blank=True)
+    depth = models.CharField(max_length=255, null=True, blank=True)
+    count = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.name
