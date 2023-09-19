@@ -1,0 +1,3 @@
+bin_name,matched_box_name,depth,X_cog,Y_cog,Z_cog,orientation
+1,#16A外箱,32,28.5,37.5,32,1.0
+1,#16A外箱,32,28.5,37.5,64,1.0
