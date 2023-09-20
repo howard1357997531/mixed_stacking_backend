@@ -320,7 +320,7 @@ def getOrderXlsxFile(request, id):
     img = Image(os.path.join(settings.MEDIA_ROOT, 'qrcode', '3873dfe0db444f9c987eb669e1f84337.png'))  # 替换为实际图片路径
     
     # 设置图片的位置和大小
-
+    
     sheet.add_image(img, 'H6')  # 图片跨越从A1到B2的单元格
     # 设置H6:I6单元格的水平和垂直居中对齐
     # for row in sheet.iter_rows(min_row=6, max_row=6, min_col=8, max_col=9):
