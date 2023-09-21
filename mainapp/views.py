@@ -215,7 +215,7 @@ def uploadCsv(request):
                 box_size=10,  # 每个模块的像素大小
                 border=4,  # 边框大小
             )
-
+            print(unique_code)
             qr.add_data(unique_code)
             qr.make(fit=True)
             img = qr.make_image(fill_color="black", back_color="white")
@@ -332,3 +332,7 @@ def getOrderXlsxFile(request, id):
     workbook.save(os.path.join(settings.MEDIA_ROOT, 'new.xlsx'))
     return Response({'ok'})
 
+@api_view(['POST'])
+def getQRcodeFromCamera(request):
+    print(request.data)
+    return Response({'宏哲超帥'})
