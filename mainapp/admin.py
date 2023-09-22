@@ -10,10 +10,10 @@ class aiWorkOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'worklist_id', 'list_order', 'createdAt')
 
 @admin.register(Order)
-class aiWorkOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'unique_code', 'image', 'createdAt')
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'unique_code', 'aiTraining_state', 'createdAt')
 
 @admin.register(OrderItem)
-class aiWorkOrderAdmin(admin.ModelAdmin):
+class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'width', 'height', 'count')
 

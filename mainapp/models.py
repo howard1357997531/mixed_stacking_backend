@@ -41,10 +41,17 @@ class aiWorkOrder(Common):
     def __str__(self):
         return str(self.name)
 
+AI_TRAINING_STATE_CHOICES = (
+    ('no_training', 'no_training'),
+    ('is_training', 'is_training'),
+    ('finish_training', 'finish_training'),
+)
+
 class Order(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
     unique_code = models.CharField(max_length=255, unique=True, null=False, blank=False)
     image = models.ImageField(upload_to='qrcode')
+    aiTraining_state = models.CharField(max_length=180, choices=AI_TRAINING_STATE_CHOICES, default='no_training')
 
     def __str__(self):
         return self.name

@@ -13,6 +13,6 @@ urlpatterns = [
     path('getOrderData/', views.getOrderData, name="getOrderData"),
     path('getOrderXlsxFile/<str:id>/', views.getOrderXlsxFile, name="getOrderXlsxFile"),
 
-    #----
+    #-----
     path('getQRcodeFromCamera/', views.getQRcodeFromCamera, name="getQRcodeFromCamera")
 ]
