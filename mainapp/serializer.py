@@ -11,7 +11,14 @@ class aiWorkOrderSerializer(ModelSerializer):
         model = aiWorkOrder
         fields = "__all__"
 
+class OrderItemSerializer(ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = "__all__"
+
 class OrderSerializer(ModelSerializer):
+    orderItem = OrderItemSerializer(many=True, required=False)
+
     class Meta:
         model = Order
-        fields = "__all__"
+        fields = ("id", "name", "unique_code", "image", "aiTraining_state", "createdAt", "modifiedAt", "orderItem")

@@ -31,46 +31,46 @@ def controlRobot(request):
     robot_speed = int(data.get('speed')) if int(data.get('speed')) <= 100 else 100
     txt_path = os.path.join(settings.MEDIA_ROOT, 'output.txt')
 
-    # if data.get('mode') == 'activate':
-    #     main(csv_id, order.total_count)
-    #     speed(50)
-    # elif data.get('mode') == 'pause':
-    #     robot_control('192.168.1.15', 10040).pause()
-    # elif data.get('mode') == 're-activate':
-    #     robot_control('192.168.1.15', 10040).start()
-    # elif data.get('mode') == 'speed':
-    #     speed(robot_speed)
-    # elif data.get('mode') == 'reset':
-    #     with open (txt_path, "w") as f:
-    #         f.write(f'')
-    #     robot_control('192.168.1.15',10040).pause()
-    #     robot_control('192.168.1.15',10040).reset()
-
-    # 1,準備抓取第1個物件,18,activate
-    ai = aiWorkOrder.objects.filter(worklist_id=csv_id).first().list_order.split(',')
-
     if data.get('mode') == 'activate':
-        time.sleep(2)
-        for i, data in enumerate(ai):
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(f'{i+1},準備抓取第{i+1}個物件,{data},prepare,1')
-            time.sleep(3)
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(f'{i+1},正在操作第{i+1}個物件,{data},operate,1')
-            time.sleep(3)
-        with open (txt_path, "w", encoding='utf-8') as f:
-            f.write(f'')
-        print("inner activate")
+        main(csv_id, order.total_count)
+        speed(50)
     elif data.get('mode') == 'pause':
-        print("inner pause")
+        robot_control('192.168.1.15', 10040).pause()
     elif data.get('mode') == 're-activate':
-        print("inner re-activate")
+        robot_control('192.168.1.15', 10040).start()
     elif data.get('mode') == 'speed':
-        print("inner speed")
+        speed(robot_speed)
     elif data.get('mode') == 'reset':
         with open (txt_path, "w") as f:
             f.write(f'')
-        print("inner reset")
+        robot_control('192.168.1.15',10040).pause()
+        robot_control('192.168.1.15',10040).reset()
+
+    # 1,準備抓取第1個物件,18,activate
+    # ai = aiWorkOrder.objects.filter(worklist_id=csv_id).first().list_order.split(',')
+
+    # if data.get('mode') == 'activate':
+    #     time.sleep(2)
+    #     for i, data in enumerate(ai):
+    #         with open(txt_path, 'w', encoding='utf-8') as f:
+    #             f.write(f'{i+1},準備抓取第{i+1}個物件,{data},prepare,1')
+    #         time.sleep(3)
+    #         with open(txt_path, 'w', encoding='utf-8') as f:
+    #             f.write(f'{i+1},正在操作第{i+1}個物件,{data},operate,1')
+    #         time.sleep(3)
+    #     with open (txt_path, "w", encoding='utf-8') as f:
+    #         f.write(f'')
+    #     print("inner activate")
+    # elif data.get('mode') == 'pause':
+    #     print("inner pause")
+    # elif data.get('mode') == 're-activate':
+    #     print("inner re-activate")
+    # elif data.get('mode') == 'speed':
+    #     print("inner speed")
+    # elif data.get('mode') == 'reset':
+    #     with open (txt_path, "w") as f:
+    #         f.write(f'')
+    #     print("inner reset")
 
     # if data.get('mode') == 'activate':
     #     file = os.path.join(settings.MEDIA_ROOT, 'csv', 'box_bestPositions_solution_9_convey_20230829.csv')

@@ -57,7 +57,7 @@ class Order(Common):
         return self.name
     
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="orderItem")
     name = models.CharField(max_length=255, null=True, blank=True)
     width = models.CharField(max_length=255, null=True, blank=True)
     height = models.CharField(max_length=255, null=True, blank=True)
