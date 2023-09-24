@@ -14,7 +14,7 @@ class aiWorkOrderSerializer(ModelSerializer):
 class OrderItemSerializer(ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = "__all__"
+        fields = ("name", "width", "height", "depth", "quantity")
 
 class OrderSerializer(ModelSerializer):
     orderItem = OrderItemSerializer(many=True, required=False)

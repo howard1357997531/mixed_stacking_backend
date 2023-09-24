@@ -216,39 +216,34 @@ def uploadCsv(request):
                 border=4,  # 边框大小
             )
             print(unique_code)
-            qr.add_data(unique_code)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            img = img.resize((120, 120))  # 指定大小为150x150
-            image_io = BytesIO()
-            img.save(image_io, 'PNG')
-            image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
+            print(csv_name)
+            # qr.add_data(unique_code)
+            # qr.make(fit=True)
+            # img = qr.make_image(fill_color="black", back_color="white")
+            # img = img.resize((120, 120))  # 指定大小为150x150
+            # image_io = BytesIO()
+            # img.save(image_io, 'PNG')
+            # image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
 
-            order = Order.objects.create(
-                name = csv_name,
-                unique_code = unique_code,
-                image = image_content)
-            order.save()
+            # order = Order.objects.create(
+            #     name = csv_name,
+            #     unique_code = unique_code,
+            #     image = image_content)
+            # order.save()
             
             # 使用 csv.reader 來讀取 CSV 檔案內容
             csv_reader = csv.reader(csv_file.read().decode('utf-8').splitlines())
             next(csv_reader)
             for reader in csv_reader:
-                OrderItem.objects.create(
-                    order = order,
-                    name = reader[1].replace('外箱', ''),
-                    width = reader[2],
-                    height = reader[3],
-                    depth = reader[4],
-                    count = int(reader[5])
-                )
-
-            # xlsx
-            # xlsx_file = request.FILES.get(f'csv_file{i+1}')
-            # df = pd.read_excel(xlsx_file)
-            # print(df.to_dict())
-
-            
+                print(reader)
+                # OrderItem.objects.create(
+                #     order = order,
+                #     name = reader[1].replace('外箱', ''),
+                #     width = reader[2],
+                #     height = reader[3],
+                #     depth = reader[4],
+                #     count = int(reader[5])
+                # )           
 
     except Exception as e:
         return Response({'message': 'error'})

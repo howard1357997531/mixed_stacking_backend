@@ -62,7 +62,7 @@ class OrderItem(models.Model):
     width = models.CharField(max_length=255, null=True, blank=True)
     height = models.CharField(max_length=255, null=True, blank=True)
     depth = models.CharField(max_length=255, null=True, blank=True)
-    count = models.PositiveIntegerField(default=0)
+    quantity = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.name
