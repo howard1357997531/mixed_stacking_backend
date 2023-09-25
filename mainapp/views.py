@@ -12,6 +12,7 @@ from .robot import main, robot_control, speed
 from .main_result_20230911 import activate_cal
 from io import BytesIO
 import random
+import datetime
 import qrcode
 import pandas as pd
 import time
@@ -243,7 +244,7 @@ def uploadCsv(request):
             next(csv_reader)
             
             for reader in csv_reader:
-                print(reader)
+                # print(reader)
                 OrderItem.objects.create(
                     order = order,
                     name = reader[1].replace('外箱', ''),
@@ -288,7 +289,7 @@ def aiTraining(request):
     #     training_time = training_time
     # )
 
-    return Response({"worklist_id": worklist_id, "list_order": ai_str, "training_time": training_time})
+    return Response({"worklist_id": worklist_id, "ai_str": ai_str, "training_time": training_time})
 
 @api_view(['GET'])
 def getOrderData(request):
@@ -299,73 +300,66 @@ import openpyxl
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Alignment
 
-@api_view(['GET'])
-def getOrderXlsxFile(request, id):
-    print(id)
-    xlsx_path = os.path.join(settings.MEDIA_ROOT, 'order.xlsx')
-    # df = pd.read_excel(xlsx_path)
-    # print(df.to_dict)
-
-    # data = {'怡振電機-AI技術部混料堆疊工單': {0: '序號', 1: 1, 2: 2, 3: 3}, 'Unnamed: 1': {0: '訂單名稱', 1: 'box_data_57', 2: 'box_data_58', 3: 'box_data_59'}, 'Unnamed: 2': {0: 'asd', 1: 'asd', 2: 'asd', 3: 'asd'}, 'Unnamed: 3': {0: '訂單內容', 1: '1.#7A_5\n2.#9_4\n3.#16A_5\n4.#18A_5\n5.#13_5\n6.#20_5\n7.#22_5\n8.#26_5\n9.#29_5\n10.#33_4\n11.#35_3', 2: '1.#16A_1\n2.#33_1', 3: '1.#18A_1'}, 'Unnamed: 4': {0: 'asd', 1: 'asd', 2: 'asd', 3: 'asd'}, 'Unnamed: 5': {0: 'asd', 1: 'asd', 2: 'asd', 3: 'asd'}, 'Unnamed: 6': {0: '時間', 1: '2023年9月15日\n下午 05:09:42', 2: '2023年9月15日\n下午 05:10:42', 3: '2023年9月15日\n下午 05:11:42'}, 'Unnamed: 7': {0: '工單QR-Code', 1: 'asd', 2: 'asd', 3: 'asd'}}
-
-    # df = pd.DataFrame(data)
-
-    # # 将数据框写入.xlsx文件
-    # df.to_excel(os.path.join(settings.MEDIA_ROOT, 'test.xlsx'), index=False)
-
-   
-
+@api_view(['POST'])
+def getOrderXlsxFile(request):
+    datas = request.data.get('datas')
+    xlsx_path = os.path.join(settings.MEDIA_ROOT, 'orderlist_step2.xlsx')
     # 打开工作簿
     workbook = openpyxl.load_workbook(xlsx_path)
-
     # 选择工作表
     sheet = workbook.active  # 或者通过工作表名称：sheet = workbook['Sheet1']
 
-    # 读取数据
-    # for row in sheet.iter_rows(values_only=True):
-    #     print(row)
-    #     for cell in row:
-    #         print(cell)
+    for i in range(len(datas)):
+        aiTraining_order = []
+        for count, data in enumerate(datas[i].get('aiTraining_order').split(','), start=1):
+            if count % 4 == 0:
+                aiTraining_order.append(data + '\n')
+            else:
+                aiTraining_order.append(data + ' ')
+        csv_name = datas[i].get('name')
+        aiTraining_text = ''.join(aiTraining_order)
+        create_at = '\n\n'.join(datas[i].get('createdAt').split('  '))
+        print(aiTraining_text)
+        print(create_at)
+        
+        xlsx_count = i + 4
+        # 添加新行
+        sheet[f'A{xlsx_count}'] = i + 1
+        sheet[f'A{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center')
+        sheet.merge_cells(f'B{xlsx_count}:C{xlsx_count}')
+        sheet[f'B{xlsx_count}'] = csv_name
+        sheet[f'B{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+        sheet.merge_cells(f'D{xlsx_count}:F{xlsx_count}')
+        sheet[f'D{xlsx_count}'] = aiTraining_text
+        sheet[f'D{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+        sheet[f'G{xlsx_count}'] = create_at
+        sheet[f'G{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+        # text_lines = text.split('\n')  # 如果文本中有换行符，请按换行符拆分文本
+        # max_line_length = max(len(line) for line in text_lines)
+        # row_height = 15  # 自定义行高
+        # if max_line_length > 0:
+        #     row_height *= (len(text_lines) + 1)  # 增加行数以适应文本
+        # sheet.row_dimensions[4].height = row_height + 30
 
-    # 添加新行
-    data_to_add = (4, 'box_data_59', None, '1.#18A_1', None, None, '2023年9月15日\n下午 05:11:42')
-    sheet['A6'] = 4
-    sheet['A6'].alignment = Alignment(horizontal='center', vertical='center')
-    sheet.merge_cells('B6:C6')
-    sheet['B6'] = 'box_data_59'
-    sheet['B6'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-    sheet.merge_cells('D6:F6')
-    text = '1.#7A_5\n2.#9_4\n3.#16A_5\n4.#18A_5\n5.#13_5'
-    sheet['D6'] = text
-    sheet['D6'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-    sheet['G6'] = '2023年9月15日\n下午 05:11:42'
-    sheet['G6'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-    text_lines = text.split('\n')  # 如果文本中有换行符，请按换行符拆分文本
-    max_line_length = max(len(line) for line in text_lines)
-    row_height = 15  # 自定义行高
-    if max_line_length > 0:
-        row_height *= (len(text_lines) + 1)  # 增加行数以适应文本
-    sheet.row_dimensions[6].height = row_height + 30
+        sheet.merge_cells(f'H{xlsx_count}:I{xlsx_count}')
 
-    sheet.merge_cells('H6:I6')
-    # text = '1.#7A_5\n2.#9_4\n3.#16A_5\n4.#18A_5\n5.#13_5'
-    # sheet['H6'] = text
-
-    # 加载图片文件
-    img = Image(os.path.join(settings.MEDIA_ROOT, 'qrcode', '3873dfe0db444f9c987eb669e1f84337.png'))  # 替换为实际图片路径
-    
-    # 设置图片的位置和大小
-    
-    sheet.add_image(img, 'H6')  # 图片跨越从A1到B2的单元格
-    # 设置H6:I6单元格的水平和垂直居中对齐
-    # for row in sheet.iter_rows(min_row=6, max_row=6, min_col=8, max_col=9):
-    #     for cell in row:
-    #         cell.alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-    sheet['H6'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-    sheet.row_dimensions[6].height = 11*15 + 30
+        # 加载图片文件
+        img = Image(os.path.join(settings.MEDIA_ROOT, 'qrcode', f'{datas[i].get("unique_code")}.png'))  # 替换为实际图片路径
+        
+        # 设置图片的位置和大小
+        
+        sheet.add_image(img, f'H{xlsx_count}')  # 图片跨越从A1到B2的单元格
+        # 设置H4:I4单元格的水平和垂直居中对齐
+        # for row in sheet.iter_rows(min_row=4, max_row=4, min_col=8, max_col=9):
+        #     for cell in row:
+        #         cell.alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+        sheet[f'H{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+        sheet.row_dimensions[6].height = 11*15 + 30
     # 保存工作簿
-    workbook.save(os.path.join(settings.MEDIA_ROOT, 'new.xlsx'))
-    return Response({'ok'})
+    date = datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')
+    xlsx_output_path = os.path.join(settings.MEDIA_ROOT, 'xlsx', f'output_{date}.xlsx')
+    workbook.save(xlsx_output_path)
+    return Response({'xlsx_output_path': f'http://127.0.0.1:8000/static/media/xlsx/output_{date}.xlsx'})
 
 @api_view(['POST'])
 def getQRcodeFromCamera(request):
