@@ -25,7 +25,7 @@ def controlRobot(request):
     data = request.data
     csv_id = data.get('id')
     order = workOrder.objects.filter(id=csv_id).first()
-    print(data)
+    # print(csv_id)
     # print(order)
     # print('order total:',order.total_count)
     robot_speed = int(data.get('speed')) if int(data.get('speed')) <= 100 else 100
@@ -154,10 +154,9 @@ def getWorkOrderData(request):
 
 @api_view(['POST'])
 def aiCalculate(request):
-    data = request.data
-    worklist_id = data.get("id")
+    worklist_id = request.data.get("id")
     t1 = time.time()
-    activate_cal(worklist_id)
+    activate_cal(worklist_id, unique_code="", step=1)
     t2 = time.time()
     training_time = round(t2-t1, 3)
     ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_{worklist_id}', f'box_positions_final.csv')
@@ -183,12 +182,13 @@ def getAiWorkOrderData(request):
     serializer = aiWorkOrderSerializer(ai_order, many=True)
     return Response(serializer.data)
 
+# step 2
 @api_view(['POST'])
 def uploadCsv(request):
     # if 'csv_file' not in request.data:
     #     return Response({'message': '請提供有效的 CSV 檔案'})
     csv_file_length = int(request.data.get('csv_file_length'))
-
+    print(csv_file_length)
     try:
         for i in range(csv_file_length):
             csv_file = request.data.get(f'csv_file{i+1}')
@@ -217,38 +217,78 @@ def uploadCsv(request):
             )
             print(unique_code)
             print(csv_name)
-            # qr.add_data(unique_code)
-            # qr.make(fit=True)
-            # img = qr.make_image(fill_color="black", back_color="white")
-            # img = img.resize((120, 120))  # 指定大小为150x150
-            # image_io = BytesIO()
-            # img.save(image_io, 'PNG')
-            # image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
+            qr.add_data(unique_code)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            img = img.resize((120, 120))  # 指定大小为150x150
+            image_io = BytesIO()
+            img.save(image_io, 'PNG')
+            image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
 
-            # order = Order.objects.create(
-            #     name = csv_name,
-            #     unique_code = unique_code,
-            #     image = image_content)
-            # order.save()
+            # 读取CSV文件内容并保存到变量中
+            # 下面 order.save() 會讓文件指针指到最後
+            # 若用 csv_file.seek(0) 雖然會指到開頭但只能讀一行又會跑到最尾
+            csv_content = csv_file.read().decode('utf-8')
+
+            order = Order.objects.create(
+                name = csv_name,
+                unique_code = unique_code,
+                image = image_content,
+                csv_file = csv_file)
+            order.save()
             
+
             # 使用 csv.reader 來讀取 CSV 檔案內容
-            csv_reader = csv.reader(csv_file.read().decode('utf-8').splitlines())
+            csv_reader = csv.reader(csv_content.splitlines())
             next(csv_reader)
+            
             for reader in csv_reader:
                 print(reader)
-                # OrderItem.objects.create(
-                #     order = order,
-                #     name = reader[1].replace('外箱', ''),
-                #     width = reader[2],
-                #     height = reader[3],
-                #     depth = reader[4],
-                #     count = int(reader[5])
-                # )           
+                OrderItem.objects.create(
+                    order = order,
+                    name = reader[1].replace('外箱', ''),
+                    width = reader[2],
+                    height = reader[3],
+                    depth = reader[4],
+                    quantity = int(reader[5])
+                )
 
     except Exception as e:
+        print(f'Error: {str(e)}')
         return Response({'message': 'error'})
 
     return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
+
+@api_view(['POST'])
+def aiTraining(request):
+    worklist_id = request.data.get("id")
+    unique_code = request.data.get("unique_code")
+    order = Order.objects.filter(id=int(worklist_id)).first()
+    order.aiTraining_state = "is_training"
+    order.save()
+    # print(worklist_id)
+    # print(unique_code)
+    # time.sleep(2)
+    t1 = time.time()
+    activate_cal(worklist_id, unique_code , step=2)
+    t2 = time.time()
+    training_time = round(t2-t1, 3)
+    ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
+    ai_df = pd.read_csv(ai_csvfile_path)
+    ai_list = ai_df['matched_box_name'].tolist()
+    ai_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+    order = Order.objects.filter(id=int(worklist_id)).first()
+    order.aiTraining_order = ai_str
+    order.aiTraining_state = "finish_training"
+    order.save()
+    # aiWorkOrder.objects.create(
+    #     name = work_order.name,
+    #     worklist_id = worklist_id,
+    #     list_order = ai_str,
+    #     training_time = training_time
+    # )
+
+    return Response({"worklist_id": worklist_id, "list_order": ai_str, "training_time": training_time})
 
 @api_view(['GET'])
 def getOrderData(request):

@@ -8,8 +8,9 @@ urlpatterns = [
     path('getWorkOrderData/', views.getWorkOrderData, name="getWorkOrderData"),
     path('aiCalculate/', views.aiCalculate, name="aiCalculate"),
     path('getAiWorkOrderData/', views.getAiWorkOrderData, name="getAiWorkOrderData"),
-    #-----
+    # step2
     path('uploadCsv/', views.uploadCsv, name="uploadCsv"),
+    path('aiTraining/', views.aiTraining, name="aiTraining"),
     path('getOrderData/', views.getOrderData, name="getOrderData"),
     path('getOrderXlsxFile/<str:id>/', views.getOrderXlsxFile, name="getOrderXlsxFile"),
 

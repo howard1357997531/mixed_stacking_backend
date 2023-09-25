@@ -1,4 +1,5 @@
 from django.db import models
+import os
 
 class Common(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -47,10 +48,15 @@ AI_TRAINING_STATE_CHOICES = (
     ('finish_training', 'finish_training'),
 )
 
+def upload_to(instance, filename):
+    return os.path.join("csv_file_step2", f"{instance.unique_code}.csv")
+
 class Order(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
     unique_code = models.CharField(max_length=255, unique=True, null=False, blank=False)
-    image = models.ImageField(upload_to='qrcode')
+    image = models.ImageField(upload_to='qrcode', null=True, blank=True)
+    csv_file = models.FileField(upload_to=upload_to, null=True, blank=True)
+    aiTraining_order = models.CharField(max_length=255, null=True, blank=True)
     aiTraining_state = models.CharField(max_length=180, choices=AI_TRAINING_STATE_CHOICES, default='no_training')
 
     def __str__(self):

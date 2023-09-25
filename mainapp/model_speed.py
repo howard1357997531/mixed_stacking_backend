@@ -326,7 +326,7 @@ class BRKGA():
 
     def cal_fitness(self, population):
         if self.multiProcess:
-            with Pool(8) as pool:
+            with Pool(6) as pool:
                 fitness_list = pool.map(self.decoder, population)
         else:
             fitness_list = [PlacementProcedure(self.inputs, solution).evaluate() for solution in population]

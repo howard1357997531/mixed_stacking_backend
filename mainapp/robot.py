@@ -163,6 +163,8 @@ def main(id, list_count):
                         print("count(inner):",count)
                         home_input=[0, 0, 0, 0, 0, 0]
                         result=send_data(3,home_input)
+                        with open(txt_path, 'w', encoding='utf-8') as t:
+                            t.write('')
                     break
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

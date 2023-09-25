@@ -50,8 +50,11 @@ def create_results_directory(base_name='result'):
     return results_dir
 
 #----------------------------------
-def create_results_directory_django(worklist_id):
-    results_dir = os.path.join(settings.MEDIA_ROOT, f'Figures_{worklist_id}')
+def create_results_directory_django(worklist_id, unique_code, step):
+    if step == 1:
+        results_dir = os.path.join(settings.MEDIA_ROOT, f'Figures_{worklist_id}')
+    elif step == 2:
+        results_dir = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}')
     os.makedirs(results_dir, exist_ok=True)
     return results_dir
 #----------------------------------
@@ -330,10 +333,13 @@ def model_training(inputs, CONFIG):
     return model, final_time
 
 
-def activate_cal(worklist_id):
+def activate_cal(worklist_id, unique_code, step):
     #------------------
-    input_path = os.path.join(settings.MEDIA_ROOT, f'box_data_{worklist_id}.csv')
-    result_folder = create_results_directory_django(worklist_id)
+    if step == 1: 
+        input_path = os.path.join(settings.MEDIA_ROOT, f'box_data_{worklist_id}.csv')
+    elif step == 2:
+        input_path = os.path.join(settings.MEDIA_ROOT, 'csv_file_step2', f'{unique_code}.csv')
+    result_folder = create_results_directory_django(worklist_id, unique_code, step)
     #------------------
     """Main function."""
     # result_folder = create_results_directory()
