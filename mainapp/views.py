@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
-from .models import workOrder, aiWorkOrder, Order, OrderItem
+from .models import workOrder, aiWorkOrder, Order, OrderItem, QRcodeExecute
 
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
@@ -24,16 +24,28 @@ import os
 @api_view(['POST'])
 def controlRobot(request):
     data = request.data
-    csv_id = data.get('id')
-    order = workOrder.objects.filter(id=csv_id).first()
-    # print(csv_id)
-    # print(order)
-    # print('order total:',order.total_count)
+    print(data)
+    data = data[0] if type(request.data) == list else data
+    print(data)
+    if data.get('mode') != 'reset':
+        csv_id = data.get('id')
+        # step1 ------------------------
+        # order = workOrder.objects.filter(id=csv_id).first()
+        # order_count = order.total_count
+        # ------------------------------
+
+        # step2 ------------------------
+        order = Order.objects.filter(id=csv_id).first()
+        order_count = len(order.aiTraining_order.split(','))
+        # ------------------------------
+        print(csv_id)
+        print(order_count)
+
     robot_speed = int(data.get('speed')) if int(data.get('speed')) <= 100 else 100
     txt_path = os.path.join(settings.MEDIA_ROOT, 'output.txt')
 
     if data.get('mode') == 'activate':
-        main(csv_id, order.total_count)
+        main(csv_id, order_count)
         speed(50)
     elif data.get('mode') == 'pause':
         robot_control('192.168.1.15', 10040).pause()
@@ -48,8 +60,13 @@ def controlRobot(request):
         robot_control('192.168.1.15',10040).reset()
 
     # 1,準備抓取第1個物件,18,activate
+    # step1 ------------------------
     # ai = aiWorkOrder.objects.filter(worklist_id=csv_id).first().list_order.split(',')
+    # ------------------------------
 
+    # step2 ------------------------
+    # ai = Order.objects.filter(id=csv_id).first().aiTraining_order.split(',')
+    # # ------------------------------
     # if data.get('mode') == 'activate':
     #     time.sleep(2)
     #     for i, data in enumerate(ai):
@@ -73,15 +90,6 @@ def controlRobot(request):
     #         f.write(f'')
     #     print("inner reset")
 
-    # if data.get('mode') == 'activate':
-    #     file = os.path.join(settings.MEDIA_ROOT, 'csv', 'box_bestPositions_solution_9_convey_20230829.csv')
-
-    #     Supply = pd.read_csv(file)
-    #     name = Supply['matched_box_name'].tolist()
-    #     name = [i.replace("#", "").replace("外箱", "") for i in name]
-    #     txt_path = os.path.join(settings.MEDIA_ROOT, "output.txt")
-    #     with open(txt_path, 'w') as t:
-    #         t.write(f'{0},{name[0]}')
     return Response({"robot"})
 
 @api_view(['GET'])
@@ -363,5 +371,38 @@ def getOrderXlsxFile(request):
 
 @api_view(['POST'])
 def getQRcodeFromCamera(request):
-    print(request.data)
+    data = request.data.get('code')
+    print(data)
+    # QRcodeExecute.objects.create(
+    #     unique_code = data
+    # )
+    # The above code is retrieving an order object from the database based on a unique code, setting
+    # the `upload_qrcode_select` attribute of the order to `True`, and then saving the updated order
+    # object back to the database.
+    order = Order.objects.filter(unique_code=data).first()
+    order.upload_qrcode_select = True
+    order.save()
     return Response({'宏哲超帥'})
+
+@api_view(['POST'])
+def getQRcodeDataFromDatabase(request):
+    data = request.data
+    print(data)
+    try:
+        if data.get('url') == '/control-robot2':
+            qrcode = QRcodeExecute.objects.filter(is_execute=False).first()
+            order = Order.objects.filter(unique_code=qrcode.unique_code).first()
+            qrcode.is_execute = True
+            qrcode.save()
+        elif data.get('url') == '/create-orderlist':
+            order = Order.objects.filter(upload_qrcode_select = True).first()
+            order.upload_qrcode_select = False
+            order.display = True
+            order.save()
+
+        return Response({'mode': 'has data',
+                        'id': order.id,
+                        'name': order.name,
+                        'createdAt': order.createdAt.strftime("%Y/%m/%d  %H:%M")})
+    except:
+        return Response({'mode': 'no data'})

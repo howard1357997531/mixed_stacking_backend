@@ -81,14 +81,21 @@ def userbase(D_data):
         return D_data
    
 ##########################################################################
-def main(id, list_count):
+def main(id, order_count):
         robot = robot_control('192.168.1.15',10040)
         robot.reset()
         robot.servo()
         robot.start()
-    
-        file = os.path.join(settings.MEDIA_ROOT, f'Figures_{id}', 'box_positions_conveyor.csv')
-        file2 = os.path.join(settings.MEDIA_ROOT, f'Figures_{id}', 'box_positions_final.csv')
+
+        # step1 ------------------------
+        # file = os.path.join(settings.MEDIA_ROOT, f'Figures_{id}', 'box_positions_conveyor.csv')
+        # file2 = os.path.join(settings.MEDIA_ROOT, f'Figures_{id}', 'box_positions_final.csv')
+        # ------------------------------
+
+        # step2 ------------------------
+        file = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{id}', 'box_positions_conveyor.csv')
+        file2 = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{id}', 'box_positions_final.csv')
+        # ------------------------------
 
         Supply = pd.read_csv(file)
         Place = pd.read_csv(file2)
@@ -155,16 +162,18 @@ def main(id, list_count):
                         count+=1
                         break
                    
-                if count==int(list_count + 1) or request_2701().endswith("00"):
-                    print("list_count(inner):", list_count)
+                if count==int(order_count + 1) or request_2701().endswith("00"):
+                    print("order_count(inner):", order_count)
                     if request_2701().endswith("00"):
                         print('系統重製')
                     else:
                         print("count(inner):",count)
                         home_input=[0, 0, 0, 0, 0, 0]
                         result=send_data(3,home_input)
+                        # ------------
                         with open(txt_path, 'w', encoding='utf-8') as t:
                             t.write('')
+                        # ------------
                     break
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

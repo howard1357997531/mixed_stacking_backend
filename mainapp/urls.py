@@ -15,5 +15,6 @@ urlpatterns = [
     path('getOrderXlsxFile/', views.getOrderXlsxFile, name="getOrderXlsxFile"),
 
     #-----
-    path('getQRcodeFromCamera/', views.getQRcodeFromCamera, name="getQRcodeFromCamera")
+    path('getQRcodeFromCamera/', views.getQRcodeFromCamera, name="getQRcodeFromCamera"),
+    path('getQRcodeDataFromDatabase/', views.getQRcodeDataFromDatabase, name="getQRcodeDataFromDatabase"),
 ]

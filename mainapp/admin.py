@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import workOrder, aiWorkOrder, Order, OrderItem
+from .models import workOrder, aiWorkOrder, Order, OrderItem, QRcodeExecute
 
 @admin.register(workOrder)
 class workOrderAdmin(admin.ModelAdmin):
@@ -16,4 +16,8 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'width', 'height', 'quantity')
+
+@admin.register(QRcodeExecute)
+class QRcodeExecuteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'unique_code', 'is_execute')
 
