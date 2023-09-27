@@ -134,7 +134,8 @@ def main(id, order_count):
                     name = [i.replace("#", "").replace("外箱", "") for i in name]
                     txt_path = os.path.join(settings.MEDIA_ROOT, "output.txt")
                     with open(txt_path, 'w', encoding='utf-8') as t:
-                        t.write(f'{count},準備抓取第{count}個物件,{name[count-1]},prepare,{int(putbase_input)}')
+                        # t.write(f'{count},準備抓取第{count}個物件,{name[count-1]},prepare,{int(putbase_input)}')
+                        t.write(f'{count},Grabbing No.{count} box,{name[count-1]},prepare,{int(putbase_input)}')
                     #-----------------
                     print('catch第%d次'%(count))
                     result=send_data(1,catch_input)
@@ -148,7 +149,8 @@ def main(id, order_count):
                     name = [i.replace("#", "").replace("外箱", "") for i in name]
                     txt_path = os.path.join(settings.MEDIA_ROOT, "output.txt")
                     with open(txt_path, 'w', encoding='utf-8') as t:
-                        t.write(f'{count},正在操作第{count}個物件,{name[count-1]},operate,{int(putbase_input)}')
+                        # t.write(f'{count},正在操作第{count}個物件,{name[count-1]},operate,{int(putbase_input)}')
+                        t.write(f'{count},Operating No.{count} box,{name[count-1]},operate,{int(putbase_input)}')
                     #-----------------
                     print('put第%d次'%(count))
                     if  putbase_input==1.0:

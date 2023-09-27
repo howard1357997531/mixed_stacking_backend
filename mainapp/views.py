@@ -71,10 +71,10 @@ def controlRobot(request):
     #     time.sleep(2)
     #     for i, data in enumerate(ai):
     #         with open(txt_path, 'w', encoding='utf-8') as f:
-    #             f.write(f'{i+1},準備抓取第{i+1}個物件,{data},prepare,1')
+    #             f.write(f'{i+1},Grabbing No.{i+1} box,{data},prepare,1')
     #         time.sleep(3)
     #         with open(txt_path, 'w', encoding='utf-8') as f:
-    #             f.write(f'{i+1},正在操作第{i+1}個物件,{data},operate,1')
+    #             f.write(f'{i+1},Operating No.{i+1} box,{data},operate,1')
     #         time.sleep(3)
     #     with open (txt_path, "w", encoding='utf-8') as f:
     #         f.write(f'')
@@ -320,6 +320,8 @@ def getOrderXlsxFile(request):
     for i in range(len(datas)):
         aiTraining_order = []
         for count, data in enumerate(datas[i].get('aiTraining_order').split(','), start=1):
+            if len(data) == 1:
+                data = ' ' + data
             if count % 4 == 0:
                 aiTraining_order.append(data + '\n')
             else:
@@ -373,16 +375,16 @@ def getOrderXlsxFile(request):
 def getQRcodeFromCamera(request):
     data = request.data.get('code')
     print(data)
+    # qrcode 上傳 AI 工單
     # QRcodeExecute.objects.create(
     #     unique_code = data
     # )
-    # The above code is retrieving an order object from the database based on a unique code, setting
-    # the `upload_qrcode_select` attribute of the order to `True`, and then saving the updated order
-    # object back to the database.
+
+    # qrcode 上傳原始工單 
     order = Order.objects.filter(unique_code=data).first()
     order.upload_qrcode_select = True
     order.save()
-    return Response({'宏哲超帥'})
+    return Response({'Success'})
 
 @api_view(['POST'])
 def getQRcodeDataFromDatabase(request):
