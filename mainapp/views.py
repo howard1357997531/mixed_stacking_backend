@@ -20,13 +20,14 @@ import uuid
 import csv
 import os
 
+from web_socket.consumers import RobotControlConsumers
+
 
 @api_view(['POST'])
 def controlRobot(request):
     data = request.data
-    print(data)
     data = data[0] if type(request.data) == list else data
-    print(data)
+    
     if data.get('mode') != 'reset':
         csv_id = data.get('id')
         # step1 ------------------------
@@ -43,21 +44,22 @@ def controlRobot(request):
 
     robot_speed = int(data.get('speed')) if int(data.get('speed')) <= 100 else 100
     txt_path = os.path.join(settings.MEDIA_ROOT, 'output.txt')
+    consumer = RobotControlConsumers()
 
-    if data.get('mode') == 'activate':
-        main(csv_id, order_count)
-        speed(50)
-    elif data.get('mode') == 'pause':
-        robot_control('192.168.1.15', 10040).pause()
-    elif data.get('mode') == 're-activate':
-        robot_control('192.168.1.15', 10040).start()
-    elif data.get('mode') == 'speed':
-        speed(robot_speed)
-    elif data.get('mode') == 'reset':
-        with open (txt_path, "w") as f:
-            f.write(f'')
-        robot_control('192.168.1.15',10040).pause()
-        robot_control('192.168.1.15',10040).reset()
+    # if data.get('mode') == 'activate':
+    #     main(csv_id, order_count)
+    #     speed(50)
+    # elif data.get('mode') == 'pause':
+    #     robot_control('192.168.1.15', 10040).pause()
+    # elif data.get('mode') == 're-activate':
+    #     robot_control('192.168.1.15', 10040).start()
+    # elif data.get('mode') == 'speed':
+    #     speed(robot_speed)
+    # elif data.get('mode') == 'reset':
+    #     with open (txt_path, "w") as f:
+    #         f.write(f'')
+    #     robot_control('192.168.1.15',10040).pause()
+    #     robot_control('192.168.1.15',10040).reset()
 
     # 1,準備抓取第1個物件,18,activate
     # step1 ------------------------
@@ -65,30 +67,31 @@ def controlRobot(request):
     # ------------------------------
 
     # step2 ------------------------
-    # ai = Order.objects.filter(id=csv_id).first().aiTraining_order.split(',')
-    # # ------------------------------
-    # if data.get('mode') == 'activate':
-    #     time.sleep(2)
-    #     for i, data in enumerate(ai):
-    #         with open(txt_path, 'w', encoding='utf-8') as f:
-    #             f.write(f'{i+1},Grabbing No.{i+1} box,{data},prepare,1')
-    #         time.sleep(3)
-    #         with open(txt_path, 'w', encoding='utf-8') as f:
-    #             f.write(f'{i+1},Operating No.{i+1} box,{data},operate,1')
-    #         time.sleep(3)
-    #     with open (txt_path, "w", encoding='utf-8') as f:
-    #         f.write(f'')
-    #     print("inner activate")
-    # elif data.get('mode') == 'pause':
-    #     print("inner pause")
-    # elif data.get('mode') == 're-activate':
-    #     print("inner re-activate")
-    # elif data.get('mode') == 'speed':
-    #     print("inner speed")
-    # elif data.get('mode') == 'reset':
-    #     with open (txt_path, "w") as f:
-    #         f.write(f'')
-    #     print("inner reset")
+    ai = Order.objects.filter(id=csv_id).first().aiTraining_order.split(',')
+    # ------------------------------
+    if data.get('mode') == 'activate':
+        time.sleep(2)
+        for i, data in enumerate(ai, start=1):
+            with open(txt_path, 'w', encoding='utf-8') as f:
+                f.write(f'{i},Grabbing No.{i} box,{data},prepare,1')
+            # consumer.sent_count(i)
+            time.sleep(3)
+            with open(txt_path, 'w', encoding='utf-8') as f:
+                f.write(f'{i},Operating No.{i} box,{data},operate,1')
+            time.sleep(3)
+        with open (txt_path, "w", encoding='utf-8') as f:
+            f.write(f'')
+        print("inner activate")
+    elif data.get('mode') == 'pause':
+        print("inner pause")
+    elif data.get('mode') == 're-activate':
+        print("inner re-activate")
+    elif data.get('mode') == 'speed':
+        print("inner speed")
+    elif data.get('mode') == 'reset':
+        with open (txt_path, "w") as f:
+            f.write(f'')
+        print("inner reset")
 
     return Response({"robot"})
 
