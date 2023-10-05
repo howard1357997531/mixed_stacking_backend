@@ -20,8 +20,9 @@ import uuid
 import csv
 import os
 
+from channels.layers import get_channel_layer
 from web_socket.consumers import RobotControlConsumers
-
+from asgiref.sync import async_to_sync
 
 @api_view(['POST'])
 def controlRobot(request):
@@ -44,7 +45,8 @@ def controlRobot(request):
 
     robot_speed = int(data.get('speed')) if int(data.get('speed')) <= 100 else 100
     txt_path = os.path.join(settings.MEDIA_ROOT, 'output.txt')
-    consumer = RobotControlConsumers()
+    channel_layer = get_channel_layer()
+    
 
     # if data.get('mode') == 'activate':
     #     main(csv_id, order_count)
@@ -72,9 +74,16 @@ def controlRobot(request):
     if data.get('mode') == 'activate':
         time.sleep(2)
         for i, data in enumerate(ai, start=1):
+            print(f'第{i}次')
             with open(txt_path, 'w', encoding='utf-8') as f:
                 f.write(f'{i},Grabbing No.{i} box,{data},prepare,1')
-            # consumer.sent_count(i)
+            async_to_sync(channel_layer.group_send)(
+                'count_room',
+                {
+                    'type': 'robot_count_change',
+                    'count': i
+                }
+            )
             time.sleep(3)
             with open(txt_path, 'w', encoding='utf-8') as f:
                 f.write(f'{i},Operating No.{i} box,{data},operate,1')
