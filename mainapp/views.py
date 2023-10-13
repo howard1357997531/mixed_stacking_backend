@@ -4,6 +4,7 @@ from django.db.models import Max
 from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
 from .models import workOrder, aiWorkOrder, Order, OrderItem, QRcodeExecute
 
@@ -313,9 +314,14 @@ def aiTraining(request):
 
 @api_view(['GET'])
 def getOrderData(request):
-    order = Order.objects.all().order_by('-id')
-    serializer = OrderSerializer(order, many=True)
-    return Response(serializer.data)
+    try:
+        time.sleep(1)
+        order = Order.objects.all().order_by('-id')
+        serializer = OrderSerializer(order, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except:
+        error_msg = 'not found orderlist'
+        return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 import openpyxl
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Alignment

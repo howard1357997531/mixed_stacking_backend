@@ -11,7 +11,8 @@ class aiWorkOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'unique_code', 'aiTraining_state', 'createdAt')
+    list_display = ('id', 'name', 'image' , 'unique_code', 'aiTraining_order', 'aiTraining_state', 'createdAt')
+    # list_display = [field.name for field in Order._meta.fields]
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
