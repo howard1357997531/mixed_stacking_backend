@@ -215,51 +215,13 @@ def uploadCsv(request):
         for i in range(csv_file_length):
             csv_file = request.data.get(f'csv_file{i+1}')
             csv_name = request.data.get(f'csv_file_name{i+1}').replace('.csv', '')
-            unique_code = uuid.uuid4().hex
-            unique_code_exist = Order.objects.filter(unique_code=unique_code)
-
-            while unique_code_exist:
-                unique_code = uuid.uuid4().hex
-                unique_code_exist = Order.objects.filter(unique_code=unique_code)
-                if unique_code_exist is None:
-                    break
             
-            # image = qrcode.make(unique_code)
-            # # 将图像保存到模型的ImageField字段
-            # image_io = BytesIO()
-            # image.resize((150, 150))
-            # image.save(image_io, 'PNG')
-            # image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
-
-            qr = qrcode.QRCode(
-                version=1,  # 版本（1-40），版本越高，QR码容纳的数据越多
-                error_correction=qrcode.constants.ERROR_CORRECT_L,  # 错误纠正级别
-                box_size=10,  # 每个模块的像素大小
-                border=4,  # 边框大小
-            )
-            print(unique_code)
-            print(csv_name)
-            qr.add_data(unique_code)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            img = img.resize((120, 120))  # 指定大小为150x150
-            image_io = BytesIO()
-            img.save(image_io, 'PNG')
-            image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
-
-            # 读取CSV文件内容并保存到变量中
-            # 下面 order.save() 會讓文件指针指到最後
-            # 若用 csv_file.seek(0) 雖然會指到開頭但只能讀一行又會跑到最尾
-            csv_content = csv_file.read().decode('utf-8')
-
             order = Order.objects.create(
                 name = csv_name,
-                unique_code = unique_code,
-                image = image_content,
                 csv_file = csv_file)
             order.save()
             
-
+            csv_content = csv_file.read().decode('utf-8')
             # 使用 csv.reader 來讀取 CSV 檔案內容
             csv_reader = csv.reader(csv_content.splitlines())
             next(csv_reader)
@@ -283,26 +245,28 @@ def uploadCsv(request):
 
 @api_view(['POST'])
 def aiTraining(request):
-    worklist_id = request.data.get("id")
-    unique_code = request.data.get("unique_code")
+    worklist_id = request.data.get("orderId")
+    # unique_code = request.data.get("unique_code")
     order = Order.objects.filter(id=int(worklist_id)).first()
-    order.aiTraining_state = "is_training"
-    order.save()
-    # print(worklist_id)
-    # print(unique_code)
-    # time.sleep(2)
-    t1 = time.time()
-    activate_cal(worklist_id, unique_code , step=2)
-    t2 = time.time()
-    training_time = round(t2-t1, 3)
-    ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
-    ai_df = pd.read_csv(ai_csvfile_path)
-    ai_list = ai_df['matched_box_name'].tolist()
-    ai_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-    order = Order.objects.filter(id=int(worklist_id)).first()
-    order.aiTraining_order = ai_str
-    order.aiTraining_state = "finish_training"
-    order.save()
+    print(worklist_id)
+    print(order)
+    # order.aiTraining_state = "is_training"
+    # order.save()
+    # # print(worklist_id)
+    # # print(unique_code)
+    # # time.sleep(2)
+    # t1 = time.time()
+    # activate_cal(worklist_id, unique_code , step=2)
+    # t2 = time.time()
+    # training_time = round(t2-t1, 3)
+    # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
+    # ai_df = pd.read_csv(ai_csvfile_path)
+    # ai_list = ai_df['matched_box_name'].tolist()
+    # ai_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+    # order = Order.objects.filter(id=int(worklist_id)).first()
+    # order.aiTraining_order = ai_str
+    # order.aiTraining_state = "finish_training"
+    # order.save()
     # aiWorkOrder.objects.create(
     #     name = work_order.name,
     #     worklist_id = worklist_id,
@@ -310,12 +274,12 @@ def aiTraining(request):
     #     training_time = training_time
     # )
 
-    return Response({"worklist_id": worklist_id, "ai_str": ai_str, "training_time": training_time})
+    # return Response({"worklist_id": worklist_id, "ai_str": ai_str, "training_time": training_time})
+    return Response('12,5,6,8,2')
 
 @api_view(['GET'])
 def getOrderData(request):
     try:
-        time.sleep(1)
         order = Order.objects.all().order_by('-id')
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -426,3 +390,84 @@ def getQRcodeDataFromDatabase(request):
                         'createdAt': order.createdAt.strftime("%Y/%m/%d  %H:%M")})
     except:
         return Response({'mode': 'no data'})
+    
+
+
+
+# qrcode
+
+# @api_view(['POST'])
+# def uploadCsv(request):
+#     # if 'csv_file' not in request.data:
+#     #     return Response({'message': '請提供有效的 CSV 檔案'})
+#     csv_file_length = int(request.data.get('csv_file_length'))
+#     print(csv_file_length)
+#     try:
+#         for i in range(csv_file_length):
+#             csv_file = request.data.get(f'csv_file{i+1}')
+#             csv_name = request.data.get(f'csv_file_name{i+1}').replace('.csv', '')
+#             unique_code = uuid.uuid4().hex
+#             unique_code_exist = Order.objects.filter(unique_code=unique_code)
+
+#             while unique_code_exist:
+#                 unique_code = uuid.uuid4().hex
+#                 unique_code_exist = Order.objects.filter(unique_code=unique_code)
+#                 if unique_code_exist is None:
+#                     break
+            
+#             # image = qrcode.make(unique_code)
+#             # # 将图像保存到模型的ImageField字段
+#             # image_io = BytesIO()
+#             # image.resize((150, 150))
+#             # image.save(image_io, 'PNG')
+#             # image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
+
+#             qr = qrcode.QRCode(
+#                 version=1,  # 版本（1-40），版本越高，QR码容纳的数据越多
+#                 error_correction=qrcode.constants.ERROR_CORRECT_L,  # 错误纠正级别
+#                 box_size=10,  # 每个模块的像素大小
+#                 border=4,  # 边框大小
+#             )
+#             print(unique_code)
+#             print(csv_name)
+#             qr.add_data(unique_code)
+#             qr.make(fit=True)
+#             img = qr.make_image(fill_color="black", back_color="white")
+#             img = img.resize((120, 120))  # 指定大小为150x150
+#             image_io = BytesIO()
+#             img.save(image_io, 'PNG')
+#             image_content = ContentFile(image_io.getvalue(), name=unique_code + '.png')
+
+#             # 读取CSV文件内容并保存到变量中
+#             # 下面 order.save() 會讓文件指针指到最後
+#             # 若用 csv_file.seek(0) 雖然會指到開頭但只能讀一行又會跑到最尾
+#             csv_content = csv_file.read().decode('utf-8')
+
+#             order = Order.objects.create(
+#                 name = csv_name,
+#                 unique_code = unique_code,
+#                 image = image_content,
+#                 csv_file = csv_file)
+#             order.save()
+            
+
+#             # 使用 csv.reader 來讀取 CSV 檔案內容
+#             csv_reader = csv.reader(csv_content.splitlines())
+#             next(csv_reader)
+            
+#             for reader in csv_reader:
+#                 # print(reader)
+#                 OrderItem.objects.create(
+#                     order = order,
+#                     name = reader[1].replace('外箱', ''),
+#                     width = reader[2],
+#                     height = reader[3],
+#                     depth = reader[4],
+#                     quantity = int(reader[5])
+#                 )
+
+#     except Exception as e:
+#         print(f'Error: {str(e)}')
+#         return Response({'message': 'error'})
+
+#     return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
