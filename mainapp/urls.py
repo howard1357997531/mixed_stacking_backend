@@ -12,9 +12,10 @@ urlpatterns = [
     path('uploadCsv/', views.uploadCsv, name="uploadCsv"),
     path('aiTraining/', views.aiTraining, name="aiTraining"),
     path('getOrderData/', views.getOrderData, name="getOrderData"),
-    path('getOrderXlsxFile/', views.getOrderXlsxFile, name="getOrderXlsxFile"),
+    
 
-    #-----
-    path('getQRcodeFromCamera/', views.getQRcodeFromCamera, name="getQRcodeFromCamera"),
-    path('getQRcodeDataFromDatabase/', views.getQRcodeDataFromDatabase, name="getQRcodeDataFromDatabase"),
+    # qrcode
+    # path('getOrderXlsxFile/', views.getOrderXlsxFile, name="getOrderXlsxFile"),
+    # path('getQRcodeFromCamera/', views.getQRcodeFromCamera, name="getQRcodeFromCamera"),
+    # path('getQRcodeDataFromDatabase/', views.getQRcodeDataFromDatabase, name="getQRcodeDataFromDatabase"),
 ]

@@ -53,13 +53,10 @@ def upload_to(instance, filename):
 
 class Order(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
-    unique_code = models.CharField(max_length=255, unique=True, null=False, blank=False)
-    image = models.ImageField(upload_to='qrcode', null=True, blank=True)
+    unique_code = models.CharField(max_length=255, unique=True, null=True, blank=True)
     csv_file = models.FileField(upload_to=upload_to, null=True, blank=True)
     aiTraining_order = models.CharField(max_length=255, null=True, blank=True)
     aiTraining_state = models.CharField(max_length=180, choices=AI_TRAINING_STATE_CHOICES, default='no_training')
-    upload_qrcode_select = models.BooleanField(default=False)
-    display = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -74,13 +71,6 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return self.name
-
-class QRcodeExecute(models.Model):
-    unique_code = models.CharField(max_length=255, null=True, blank=True)
-    is_execute = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.unique_code
 
 # class Order(Common):
 #     name = models.CharField(max_length=255, null=True, blank=True)

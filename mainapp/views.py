@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
-from .models import workOrder, aiWorkOrder, Order, OrderItem, QRcodeExecute
+from .models import workOrder, aiWorkOrder, Order, OrderItem
 
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
@@ -210,19 +210,30 @@ def uploadCsv(request):
     # if 'csv_file' not in request.data:
     #     return Response({'message': '請提供有效的 CSV 檔案'})
     csv_file_length = int(request.data.get('csv_file_length'))
-    print(csv_file_length)
+    
     try:
         for i in range(csv_file_length):
             csv_file = request.data.get(f'csv_file{i+1}')
             csv_name = request.data.get(f'csv_file_name{i+1}').replace('.csv', '')
-            
+            unique_code = uuid.uuid4().hex
+            unique_code_exist = Order.objects.filter(unique_code=unique_code)
+
+            while unique_code_exist:
+                unique_code = uuid.uuid4().hex
+                unique_code_exist = Order.objects.filter(unique_code=unique_code)
+                if unique_code_exist is None:
+                    break
+            # 读取CSV文件内容并保存到变量中
+            # 下面 order.save() 會讓文件指针指到最後
+            # 若用 csv_file.seek(0) 雖然會指到開頭但只能讀一行又會跑到最尾
+            csv_content = csv_file.read().decode('utf-8')
+
             order = Order.objects.create(
-                name = csv_name,
-                csv_file = csv_file)
+                name=csv_name,
+                unique_code=unique_code,
+                csv_file=csv_file)
             order.save()
             
-            csv_content = csv_file.read().decode('utf-8')
-            # 使用 csv.reader 來讀取 CSV 檔案內容
             csv_reader = csv.reader(csv_content.splitlines())
             next(csv_reader)
             
@@ -245,152 +256,49 @@ def uploadCsv(request):
 
 @api_view(['POST'])
 def aiTraining(request):
-    worklist_id = request.data.get("orderId")
-    # unique_code = request.data.get("unique_code")
-    order = Order.objects.filter(id=int(worklist_id)).first()
-    print(worklist_id)
-    print(order)
-    # order.aiTraining_state = "is_training"
-    # order.save()
-    # # print(worklist_id)
-    # # print(unique_code)
-    # # time.sleep(2)
-    # t1 = time.time()
-    # activate_cal(worklist_id, unique_code , step=2)
-    # t2 = time.time()
-    # training_time = round(t2-t1, 3)
-    # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
-    # ai_df = pd.read_csv(ai_csvfile_path)
-    # ai_list = ai_df['matched_box_name'].tolist()
-    # ai_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-    # order = Order.objects.filter(id=int(worklist_id)).first()
-    # order.aiTraining_order = ai_str
-    # order.aiTraining_state = "finish_training"
-    # order.save()
-    # aiWorkOrder.objects.create(
-    #     name = work_order.name,
-    #     worklist_id = worklist_id,
-    #     list_order = ai_str,
-    #     training_time = training_time
-    # )
+    try:
+        worklist_id = request.data.get("orderId")
+        order = Order.objects.filter(id=int(worklist_id)).first()
+        order.aiTraining_state = "is_training"
+        order.save()
+        unique_code = order.unique_code
 
-    # return Response({"worklist_id": worklist_id, "ai_str": ai_str, "training_time": training_time})
-    return Response('12,5,6,8,2')
+        t1 = time.time()
+        activate_cal(worklist_id, unique_code , step=2)
+        t2 = time.time()
+        training_time = round(t2-t1, 3)
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
+        ai_df = pd.read_csv(ai_csvfile_path)
+        ai_list = ai_df['matched_box_name'].tolist()
+        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+
+        order.aiTraining_order = aiResult_str
+        order.aiTraining_state = "finish_training"
+        order.save()
+        # aiWorkOrder.objects.create(
+        #     name = work_order.name,
+        #     worklist_id = worklist_id,
+        #     list_order = ai_str,
+        #     training_time = training_time
+        # )
+
+        return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
+    except:
+        return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 def getOrderData(request):
     try:
-        order = Order.objects.all().order_by('-id')
-        serializer = OrderSerializer(order, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            order = Order.objects.all().order_by('-id')
+            serializer = OrderSerializer(order, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except:
+            return Response([], status=status.HTTP_200_OK)
     except:
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
-import openpyxl
-from openpyxl.drawing.image import Image
-from openpyxl.styles import Alignment
-
-@api_view(['POST'])
-def getOrderXlsxFile(request):
-    datas = request.data.get('datas')
-    xlsx_path = os.path.join(settings.MEDIA_ROOT, 'orderlist_step2.xlsx')
-    # 打开工作簿
-    workbook = openpyxl.load_workbook(xlsx_path)
-    # 选择工作表
-    sheet = workbook.active  # 或者通过工作表名称：sheet = workbook['Sheet1']
-
-    for i in range(len(datas)):
-        aiTraining_order = []
-        for count, data in enumerate(datas[i].get('aiTraining_order').split(','), start=1):
-            if len(data) == 1:
-                data = ' ' + data
-            if count % 4 == 0:
-                aiTraining_order.append(data + '\n')
-            else:
-                aiTraining_order.append(data + ' ')
-        csv_name = datas[i].get('name')
-        aiTraining_text = ''.join(aiTraining_order)
-        create_at = '\n\n'.join(datas[i].get('createdAt').split('  '))
-        print(aiTraining_text)
-        print(create_at)
-        
-        xlsx_count = i + 4
-        # 添加新行
-        sheet[f'A{xlsx_count}'] = i + 1
-        sheet[f'A{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center')
-        sheet.merge_cells(f'B{xlsx_count}:C{xlsx_count}')
-        sheet[f'B{xlsx_count}'] = csv_name
-        sheet[f'B{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-        sheet.merge_cells(f'D{xlsx_count}:F{xlsx_count}')
-        sheet[f'D{xlsx_count}'] = aiTraining_text
-        sheet[f'D{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-        sheet[f'G{xlsx_count}'] = create_at
-        sheet[f'G{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-        # text_lines = text.split('\n')  # 如果文本中有换行符，请按换行符拆分文本
-        # max_line_length = max(len(line) for line in text_lines)
-        # row_height = 15  # 自定义行高
-        # if max_line_length > 0:
-        #     row_height *= (len(text_lines) + 1)  # 增加行数以适应文本
-        # sheet.row_dimensions[4].height = row_height + 30
-
-        sheet.merge_cells(f'H{xlsx_count}:I{xlsx_count}')
-
-        # 加载图片文件
-        img = Image(os.path.join(settings.MEDIA_ROOT, 'qrcode', f'{datas[i].get("unique_code")}.png'))  # 替换为实际图片路径
-        
-        # 设置图片的位置和大小
-        
-        sheet.add_image(img, f'H{xlsx_count}')  # 图片跨越从A1到B2的单元格
-        # 设置H4:I4单元格的水平和垂直居中对齐
-        # for row in sheet.iter_rows(min_row=4, max_row=4, min_col=8, max_col=9):
-        #     for cell in row:
-        #         cell.alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-        sheet[f'H{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
-        sheet.row_dimensions[6].height = 11*15 + 30
-    # 保存工作簿
-    date = datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')
-    xlsx_output_path = os.path.join(settings.MEDIA_ROOT, 'xlsx', f'output_{date}.xlsx')
-    workbook.save(xlsx_output_path)
-    return Response({'xlsx_output_path': f'http://127.0.0.1:8000/static/media/xlsx/output_{date}.xlsx'})
-
-@api_view(['POST'])
-def getQRcodeFromCamera(request):
-    data = request.data.get('code')
-    print(data)
-    # qrcode 上傳 AI 工單
-    # QRcodeExecute.objects.create(
-    #     unique_code = data
-    # )
-
-    # qrcode 上傳原始工單 
-    order = Order.objects.filter(unique_code=data).first()
-    order.upload_qrcode_select = True
-    order.save()
-    return Response({'Success'})
-
-@api_view(['POST'])
-def getQRcodeDataFromDatabase(request):
-    data = request.data
-    print(data)
-    try:
-        if data.get('url') == '/control-robot2':
-            qrcode = QRcodeExecute.objects.filter(is_execute=False).first()
-            order = Order.objects.filter(unique_code=qrcode.unique_code).first()
-            qrcode.is_execute = True
-            qrcode.save()
-        elif data.get('url') == '/create-orderlist':
-            order = Order.objects.filter(upload_qrcode_select = True).first()
-            order.upload_qrcode_select = False
-            order.display = True
-            order.save()
-
-        return Response({'mode': 'has data',
-                        'id': order.id,
-                        'name': order.name,
-                        'createdAt': order.createdAt.strftime("%Y/%m/%d  %H:%M")})
-    except:
-        return Response({'mode': 'no data'})
-    
 
 
 
@@ -471,3 +379,109 @@ def getQRcodeDataFromDatabase(request):
 #         return Response({'message': 'error'})
 
 #     return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
+
+# import openpyxl
+# from openpyxl.drawing.image import Image
+# from openpyxl.styles import Alignment
+
+# @api_view(['POST'])
+# def getOrderXlsxFile(request):
+#     datas = request.data.get('datas')
+#     xlsx_path = os.path.join(settings.MEDIA_ROOT, 'orderlist_step2.xlsx')
+#     # 打开工作簿
+#     workbook = openpyxl.load_workbook(xlsx_path)
+#     # 选择工作表
+#     sheet = workbook.active  # 或者通过工作表名称：sheet = workbook['Sheet1']
+
+#     for i in range(len(datas)):
+#         aiTraining_order = []
+#         for count, data in enumerate(datas[i].get('aiTraining_order').split(','), start=1):
+#             if len(data) == 1:
+#                 data = ' ' + data
+#             if count % 4 == 0:
+#                 aiTraining_order.append(data + '\n')
+#             else:
+#                 aiTraining_order.append(data + ' ')
+#         csv_name = datas[i].get('name')
+#         aiTraining_text = ''.join(aiTraining_order)
+#         create_at = '\n\n'.join(datas[i].get('createdAt').split('  '))
+#         print(aiTraining_text)
+#         print(create_at)
+        
+#         xlsx_count = i + 4
+#         # 添加新行
+#         sheet[f'A{xlsx_count}'] = i + 1
+#         sheet[f'A{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center')
+#         sheet.merge_cells(f'B{xlsx_count}:C{xlsx_count}')
+#         sheet[f'B{xlsx_count}'] = csv_name
+#         sheet[f'B{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+#         sheet.merge_cells(f'D{xlsx_count}:F{xlsx_count}')
+#         sheet[f'D{xlsx_count}'] = aiTraining_text
+#         sheet[f'D{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+#         sheet[f'G{xlsx_count}'] = create_at
+#         sheet[f'G{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+#         # text_lines = text.split('\n')  # 如果文本中有换行符，请按换行符拆分文本
+#         # max_line_length = max(len(line) for line in text_lines)
+#         # row_height = 15  # 自定义行高
+#         # if max_line_length > 0:
+#         #     row_height *= (len(text_lines) + 1)  # 增加行数以适应文本
+#         # sheet.row_dimensions[4].height = row_height + 30
+
+#         sheet.merge_cells(f'H{xlsx_count}:I{xlsx_count}')
+
+#         # 加载图片文件
+#         img = Image(os.path.join(settings.MEDIA_ROOT, 'qrcode', f'{datas[i].get("unique_code")}.png'))  # 替换为实际图片路径
+        
+#         # 设置图片的位置和大小
+        
+#         sheet.add_image(img, f'H{xlsx_count}')  # 图片跨越从A1到B2的单元格
+#         # 设置H4:I4单元格的水平和垂直居中对齐
+#         # for row in sheet.iter_rows(min_row=4, max_row=4, min_col=8, max_col=9):
+#         #     for cell in row:
+#         #         cell.alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+#         sheet[f'H{xlsx_count}'].alignment = Alignment(horizontal='center', vertical='center', wrapText=True)
+#         sheet.row_dimensions[6].height = 11*15 + 30
+#     # 保存工作簿
+#     date = datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')
+#     xlsx_output_path = os.path.join(settings.MEDIA_ROOT, 'xlsx', f'output_{date}.xlsx')
+#     workbook.save(xlsx_output_path)
+#     return Response({'xlsx_output_path': f'http://127.0.0.1:8000/static/media/xlsx/output_{date}.xlsx'})
+
+# @api_view(['POST'])
+# def getQRcodeFromCamera(request):
+#     data = request.data.get('code')
+#     print(data)
+#     # qrcode 上傳 AI 工單
+#     # QRcodeExecute.objects.create(
+#     #     unique_code = data
+#     # )
+
+#     # qrcode 上傳原始工單 
+#     order = Order.objects.filter(unique_code=data).first()
+#     order.upload_qrcode_select = True
+#     order.save()
+#     return Response({'Success'})
+
+# @api_view(['POST'])
+# def getQRcodeDataFromDatabase(request):
+#     data = request.data
+#     print(data)
+#     try:
+#         if data.get('url') == '/control-robot2':
+#             qrcode = QRcodeExecute.objects.filter(is_execute=False).first()
+#             order = Order.objects.filter(unique_code=qrcode.unique_code).first()
+#             qrcode.is_execute = True
+#             qrcode.save()
+#         elif data.get('url') == '/create-orderlist':
+#             order = Order.objects.filter(upload_qrcode_select = True).first()
+#             order.upload_qrcode_select = False
+#             order.display = True
+#             order.save()
+
+#         return Response({'mode': 'has data',
+#                         'id': order.id,
+#                         'name': order.name,
+#                         'createdAt': order.createdAt.strftime("%Y/%m/%d  %H:%M")})
+#     except:
+#         return Response({'mode': 'no data'})
+    
