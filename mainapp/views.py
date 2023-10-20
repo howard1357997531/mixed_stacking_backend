@@ -286,16 +286,15 @@ def aiTraining(request):
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 def getOrderData(request):
     try:
-        try:
-            order = Order.objects.all().order_by('-id')
-            serializer = OrderSerializer(order, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except:
-            return Response([], status=status.HTTP_200_OK)
+        # time.sleep(5)
+        # order = Order.objects.get(id=123456).order_by('-id')
+        order = Order.objects.all().order_by('-id')
+        serializer = OrderSerializer(order, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     except:
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
