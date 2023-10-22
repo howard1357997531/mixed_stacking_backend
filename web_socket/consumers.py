@@ -26,6 +26,11 @@ class RobotControlConsumers(AsyncJsonWebsocketConsumer):
             'count': event['count']
         })
     
+    async def robot_mode_change(self, event):
+        await self.send_json({
+            'mode': event['mode']
+        })
+    
 
 
 

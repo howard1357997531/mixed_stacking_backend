@@ -198,6 +198,109 @@ def aiCalculate(request):
     return Response({"worklist_id": worklist_id, "list_order": ai_str, "training_time": training_time})
     # return Response({"worklist_id": worklist_id,  "training_time": training_time})
 
+@api_view(['POST'])
+def executeRobot(request):
+    try:
+        orderId = request.data.get('orderId')
+        order = Order.objects.filter(id=orderId).first()
+        order_count = len(order.aiTraining_order.split(','))
+
+        channel_layer = get_channel_layer()
+
+        # if data.get('mode') == 'activate':
+        #     main(csv_id, order_count)
+        #     speed(50)
+        # elif data.get('mode') == 'pause':
+        #     robot_control('192.168.1.15', 10040).pause()
+        # elif data.get('mode') == 're-activate':
+        #     robot_control('192.168.1.15', 10040).start()
+        # elif data.get('mode') == 'speed':
+        #     speed(robot_speed)
+        # elif data.get('mode') == 'reset':
+        #     with open (txt_path, "w") as f:
+        #         f.write(f'')
+        #     robot_control('192.168.1.15',10040).pause()
+        #     robot_control('192.168.1.15',10040).reset()
+
+        # 1,準備抓取第1個物件,18,activate
+        # step1 ------------------------
+        # ai = aiWorkOrder.objects.filter(worklist_id=csv_id).first().list_order.split(',')
+        # ------------------------------
+
+        # step2 ------------------------
+        # ai = Order.objects.filter(id=csv_id).first().aiTraining_order.split(',')
+        # # ------------------------------
+        time.sleep(2)
+        for i in range(1, order_count + 1):
+            print(f'第{i}次')
+            if i % 2 == 0:
+                async_to_sync(channel_layer.group_send)(
+                    'count_room',
+                    {
+                        'type': 'robot_mode_change',
+                        'mode': 'prepare'
+                    }
+                )
+            else:
+                async_to_sync(channel_layer.group_send)(
+                    'count_room',
+                    {
+                        'type': 'robot_mode_change',
+                        'mode': 'operate'
+                    }
+                )
+
+            async_to_sync(channel_layer.group_send)(
+                'count_room',
+                {
+                    'type': 'robot_count_change',
+                    'count': i
+                }
+            )
+            time.sleep(3)
+            if i == 8 :
+                break
+            # time.sleep(3)
+
+        return Response({}, status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def robotSetting(request):
+    try:
+        data = request.data
+        mode = data.get('mode')
+        # channel_layer = get_channel_layer()
+
+        # if mode == 'pause':
+        #     robot_control('192.168.1.15', 10040).pause()
+        # elif mode == 'unPuase':
+        #     robot_control('192.168.1.15', 10040).start()
+        # elif mode == 'speedUp' or mode == 'speedDown':
+        #     robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
+        #     robot_speed = 100 if robot_speed > 100 else robot_speed
+        #     speed(robot_speed)
+        # elif mode == 'reset':
+        #     robot_control('192.168.1.15',10040).pause()
+        #     robot_control('192.168.1.15',10040).reset()
+
+        if mode == 'pause':
+            print(mode)
+        elif mode == 'unPause':
+            print(mode)
+        elif mode == 'speedUp' or mode == 'speedDown':
+            robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
+            robot_speed = 100 if robot_speed > 100 else robot_speed
+            print(mode, robot_speed)
+        elif mode == 'reset':
+            print(mode)
+
+        return Response({}, status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
+        
+
 @api_view(['GET'])
 def getAiWorkOrderData(request):
     ai_order = aiWorkOrder.objects.all().order_by('-id')

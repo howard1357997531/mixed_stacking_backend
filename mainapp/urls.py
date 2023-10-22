@@ -12,6 +12,8 @@ urlpatterns = [
     path('uploadCsv/', views.uploadCsv, name="uploadCsv"),
     path('aiTraining/', views.aiTraining, name="aiTraining"),
     path('getOrderData/', views.getOrderData, name="getOrderData"),
+    path('executeRobot/', views.executeRobot, name="executeRobot"),
+    path('robotSetting/', views.robotSetting, name="robotSetting"),
     
 
     # qrcode
