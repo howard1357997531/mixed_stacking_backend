@@ -11,6 +11,7 @@ from .models import workOrder, aiWorkOrder, Order, OrderItem
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
 from .main_result_20230911 import activate_cal
+from .main_result_UI import ai_calculate
 from io import BytesIO
 import random
 import datetime
@@ -24,6 +25,26 @@ import os
 from channels.layers import get_channel_layer
 from web_socket.consumers import RobotControlConsumers
 from asgiref.sync import async_to_sync
+
+channel_layer = get_channel_layer()
+
+def websocket_robot_state(state):
+    return async_to_sync(channel_layer.group_send)(
+        'count_room',
+        {
+            'type': 'robot_mode_change',
+            'mode': state
+        }
+    )
+
+def websocket_object_count(count):
+    return async_to_sync(channel_layer.group_send)(
+        'count_room',
+        {
+            'type': 'robot_count_change',
+            'count': count
+        }
+    )
 
 @api_view(['POST'])
 def controlRobot(request):
@@ -208,50 +229,27 @@ def executeRobot(request):
         order = Order.objects.filter(id=orderId).first()
         order_count = len(order.aiTraining_order.split(','))
 
-        channel_layer = get_channel_layer()
         # robot = Yaskawa_control('192.168.1.15', 10040)
-        # thread1 = threading.Thread(target=robot.Robot_Demo2)
+        # thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId,))
         # thread1.start()
-        # thread2 = threading.Thread(target=robot.supplycheck)
+        # time.sleep(2)
+        # thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
         # thread2.start()
 
-        
-        # main(orderId, order_count)
-        # speed(50)
-
         # test
+        
         time.sleep(2)
         for i in range(1, order_count + 1):
             print(f'第{i}次')
-            if i % 2 != 0:
-                async_to_sync(channel_layer.group_send)(
-                    'count_room',
-                    {
-                        'type': 'robot_mode_change',
-                        'mode': 'prepare'
-                    }
-                )
-            else:
-                async_to_sync(channel_layer.group_send)(
-                    'count_room',
-                    {
-                        'type': 'robot_mode_change',
-                        'mode': 'operate'
-                    }
-                )
-
-            async_to_sync(channel_layer.group_send)(
-                'count_room',
-                {
-                    'type': 'robot_count_change',
-                    'count': i
-                }
-            )
-            time.sleep(3)
+            websocket_object_count(i)
+            websocket_robot_state('prepare')
+            time.sleep(2)
+            websocket_robot_state('operate')
+            time.sleep(2)
+            
             if i == 8 :
                 break
-            # time.sleep(3)
-
+        # websocket_robot_state('已結束')
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
@@ -261,7 +259,7 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        # channel_layer = get_channel_layer()
+        channel_layer = get_channel_layer()
         # robot = Yaskawa_control('192.168.1.15', 10040)
         # if mode == 'pause':
         #     robot.pause()
@@ -352,12 +350,19 @@ def aiTraining(request):
     try:
         worklist_id = request.data.get("orderId")
         order = Order.objects.filter(id=int(worklist_id)).first()
+        if request.data.get('mode') == 'error':
+            order.aiTraining_state = "no_training"
+            order.save()
+            return Response('ok', status=status.HTTP_200_OK)
+        
         order.aiTraining_state = "is_training"
         order.save()
         unique_code = order.unique_code
-
+        print(worklist_id)
+        print(type(worklist_id))
+        print(unique_code)
         t1 = time.time()
-        activate_cal(worklist_id, unique_code , step=2)
+        ai_calculate(worklist_id, unique_code, step=2)
         t2 = time.time()
         training_time = round(t2-t1, 3)
         ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')

@@ -2,12 +2,18 @@ import socket
 import time
 import pandas as pd
 import csv
-#from AI_team import main
 from .main import cameraCheck
+
 robot_state=True
 motion_state=0
 itemstatus=0
 angle=0
+
+# ------------------------------
+# web_socket
+from views import websocket_robot_state, websocket_object_count
+# ------------------------------
+
 ##########################################################################
 # data process
 def decimal_to_hex(decimal):
@@ -28,26 +34,27 @@ def status():
         global itemstatus
         return itemstatus
 
+# -----------------------
 from django.conf import settings
 import os
 # -----------------------
-box_positions_conveyor = os.path.join(settings.MEDIA_ROOT, 'camera', 'box_positions_conveyor.csv')
-box_positions_final = os.path.join(settings.MEDIA_ROOT, 'camera', 'box_positions_final.csv')
-# -----------------------
-#爬取位置資料 並分析姿勢轉換成列
-def getdata():
-    Supply = pd.read_csv(box_positions_conveyor)
-    Place = pd.read_csv(box_positions_final)
+
+def getdata(orderId):
+    # -----------------------
+    orderId = orderId
+    box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
+    box_positions_final_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_final.csv')
+    # -----------------------
+
+    Supply = pd.read_csv(box_positions_conveyor_path)
+    Place = pd.read_csv(box_positions_final_path)
     Supply_columns = Supply[['pos_x', 'pos_y', 'pos_z']]
     Place_columns = Place[['bin_name','X_cog', 'Y_cog', 'Z_cog','orientation']]
-    #print(Supply_columns )
-    #print(Place_columns )
     catch_list = []
     put_list = []
     posture1=[180.0,0.0,0.0]
     posture2=[180.0,0.0,90.0]
     count_list=0
-    #處理傳入姿勢角度(0,1)
     for index, row in Supply_columns.iterrows():
         supply_initial = row.to_list()
         Base=[2]
@@ -66,8 +73,6 @@ def getdata():
         place_data=Base+place_initial[1:4]+posture
         put_list.append(place_data)
         count_list+=1
-            #print(put_list
-    #print(put_base)
     return (catch_list,put_list,count_list)
 ##########################################################################
 class Yaskawa_control():
@@ -76,6 +81,9 @@ class Yaskawa_control():
         self.server_ip = ip
         self.server_port = port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # --------------------
+        # self.orderId = orderId
+        # --------------------
 
     def send_packet(self,data_packet):
         self.client_socket.sendto(data_packet, (self.server_ip, self.server_port))
@@ -130,9 +138,10 @@ class Yaskawa_control():
         D_data_hex= decimal_to_hex(D_data)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 17 00 01 02 00 00  " + D_data_hex.replace(" ", ""))
         self.send_packet(data_packet)
+
     #D格式資料處理+傳送
     def Dword_packet(self,data_D):
-        for position, value in data_D.items():#items()用於字典方式
+        for position, value in data_D.items():
             if position in ['process']:
                 decimal_value = int(value * 1)
             elif position in ['case']:
@@ -152,12 +161,14 @@ class Yaskawa_control():
 
             data_packet = bytes.fromhex(f"59 45 52 43 20 00 {Datalengh_mapping[position]} 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 {position_mapping[position]} 00 01 {Write_mapping}  00 00 " + hex_value.replace(" ", ""))
             self.send_packet(data_packet)
-            #print(f"Received response from MOTOMAN robot: {response.hex()}")              
+            #print(f"Received response from MOTOMAN robot: {response.hex()}") 
+                         
     #上位機訊號
     def PCsignal(self,a):
         signal=decimal_to_hex1(a)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 08 00 01 02 00 00  " + signal.replace(" ", ""))
         self.send_packet(data_packet)
+
     #讀取座標暫存器:B8
     def request_PCsignal(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 08 00 01 01 00 00 00" )
@@ -169,17 +180,20 @@ class Yaskawa_control():
                 status=True
             else:
                 status=False
-            return status  
+            return status
+          
     #B011為TRUE才需要校正
     def send_boxcheck(self,a):
         signal=decimal_to_hex1(a)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 0B 00 01 02 00 00  " + signal.replace(" ", ""))
-        self.send_packet(data_packet)    
+        self.send_packet(data_packet)
+
     #B012檢查狀態1正確 2錯誤 3下一個
     def sendB12(self,a):
         signal=decimal_to_hex1(a)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 0C 00 01 02 00 00  " + signal.replace(" ", ""))
         self.send_packet(data_packet)
+
     #讀取網域輸入信號'00'break全部迴圈   
     def request_robotsystem(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8D 0A 01 0E 00 00 00" )
@@ -189,12 +203,14 @@ class Yaskawa_control():
         last_char = response_R[-1]
         status = int(last_char, 16)
         return status
+    
     #檢查系統狀態
     def request_system(self):
         global robot_state
         if robot_state:
             status=True
         else:
+            # The above code is declaring a variable `status` and assigning it the value `False`.
             status=False
         return status 
     #狀態請求
@@ -203,7 +219,8 @@ class Yaskawa_control():
         response=self.send_packet(data_packet)
         response_R = response.hex()
         last_digit = int(response_R[-1])
-        return last_digit    
+        return last_digit 
+       
     #機器人接收/動作暫存器:B100
     def request_robotsignal(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 64 00 01 01 00 00 00" )
@@ -215,7 +232,8 @@ class Yaskawa_control():
                 status=True
             else:
                 status=False
-            return status    
+            return status
+            
     #讀取機器人是否初始化
     def request_Initial(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 67 00 01 01 00 00 00" )
@@ -227,7 +245,8 @@ class Yaskawa_control():
                 status=True
             else:
                 status=False
-            return status   
+            return status
+           
     #sensor訊號:in(9)
     def request_sensor9(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
@@ -242,7 +261,8 @@ class Yaskawa_control():
                 status=True
             else:
                 status=False
-            return status  
+            return status
+          
     #sensor訊號:in(10)
     def request_sensor10(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
@@ -257,7 +277,8 @@ class Yaskawa_control():
                 status=True
             else:
                 status=False
-            return status   
+            return status
+          
     #sensor訊號:in(11)
     def request_sensor11(self):
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
@@ -274,6 +295,7 @@ class Yaskawa_control():
             else:
                 status=False
             return status
+        
     #訊號檢查
     def handshake(self):
         global itemstatus
@@ -293,7 +315,7 @@ class Yaskawa_control():
                     print('Robot recieve_data success')
                     if motion_state==1:
                         itemstatus=3
-                    self.PCsignal(False )#防呆機制
+                    self.PCsignal(False )
                     time.sleep(0.05) 
                     while True:
                         if self.request_robotsignal()==False:
@@ -304,33 +326,43 @@ class Yaskawa_control():
                         if self.request_system()==False:
                             print('STOP3')
                             break
-                
-
                 if robotsignal==True and sendsignal==True:
                     print('send_packet next time')
                     break
         else:
             print('send_packet fail')
             sendsignal=False
-            robotsignal=False
-                
+            robotsignal=False    
         return (sendsignal,robotsignal)
+    
     #工單檢查函式
-    def supplycheck(self):
+    def supplycheck(self, orderId):
         global itemstatus
+        global robot_state
         global angle
-        Supply = pd.read_csv(box_positions_conveyor)
+        itemstatus=5
+        robot_state=True
+        # --------------------------------
+        box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
+        # --------------------------------
+        Supply = pd.read_csv(box_positions_conveyor_path)
         Supply_columns = Supply['matched_box_name']
-        for name in Supply_columns:#不需要index
+        for name in Supply_columns: 
+            if self.request_system()==False:
+                itemstatus=0
+                break
             while True:
-                # if itemstatus !=1:
+                if self.request_system()==False:
+                    itemstatus=0
+                    break
                 time.sleep(0.1)
                 if itemstatus !=1 and self.request_sensor11():
                     print('開始檢測')
                     sd = cameraCheck()
                 #相機函式
-                    if sd[0] == name:#檢查第一位
+                    if sd[0] == name.replace('外箱', '').replace('A', ''):#檢查第一位
                         print("Incoming materials are correct")
+                        websocket_robot_state('檢測正確')
                         if sd[1]==1:
                             angle=1
                             print("angle:1")
@@ -344,34 +376,23 @@ class Yaskawa_control():
                         #錯誤
                         itemstatus=2
                         print("Incoming materials are false")
-                    # sd = sub.input_manager.signal()
-                    # if sd[0] == name:#檢查第一位
-                    #     print("Incoming materials are correct")
-                    #     if sd[1]==1:
-                    #         angle=1
-                    #     else:
-                    #         angle=0
-                    #     #正確
-                    #     itemstatus=1
-                    #     break
-                    # else:
-                    #     #錯誤
-                    #     itemstatus=2
-                    #     print("Incoming materials are false")
-            # itemstatus=int(input())#測試用 要註解
+                        
+                        websocket_robot_state('檢測錯誤')
+                    
+
     #將上位機數據傳入手臂
     def send_data(self,D_data):   
         print(D_data)
         data_dict={'process':D_data[0],'case':D_data[1],'userbase':D_data[2],'X':D_data[3],'Y':D_data[4],'Z':D_data[5],'A':D_data[6],'B':D_data[7],'C':D_data[8]}
         self.Dword_packet(data_dict)
-        #handshake
+
         hand_result=self.handshake()
         if hand_result==(True,True):
             result=True
         else:
             result=False
-        
         return result
+    
 ##########################################################################    
     #Demo1
     def Robot_Demo1(self):
@@ -386,12 +407,10 @@ class Yaskawa_control():
             if self.request_Initial()==True:
                 print('回到起始位')
                 break
-        
         catch_list, put_list,count_list = getdata()
         count=1
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         for catch_input, put_input in zip(catch_list, put_list):
-                #夾取迴圈
                 while True:
                     if self.request_system()==False:
                         break
@@ -403,7 +422,6 @@ class Yaskawa_control():
                     result=self.send_data(packet)
                     if result==True:
                         break  
-                #放置迴圈
                 while True:
                     if self.request_system()==False:
                         break
@@ -415,8 +433,7 @@ class Yaskawa_control():
                     if result==True:
                         count+=1
                         break   
-
-                if count==count_list or self.request_system()==False:
+                if count==count_list+1 or self.request_system()==False:
                     if self.request_system()==False:
                         print('系統重置')
                     else:
@@ -427,15 +444,15 @@ class Yaskawa_control():
                         result=self.send_data(packet)
                         print('回到原點')
                     break
-        
         self.pause()
         self.reset()
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client_socket.close()
         print("Connection closed.")  
+
 ##########################################################################
     #Demo2
-    def Robot_Demo2(self):
+    def Robot_Demo2(self, orderId):
         global itemstatus
         global angle
         global motion_state
@@ -450,13 +467,12 @@ class Yaskawa_control():
             if self.request_Initial()==True:
                 print('回到起始位')
                 break
-        
-        catch_list, put_list,count_list = getdata()
+        catch_list, put_list, count_list = getdata(orderId)
         count=1
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         for catch_input, put_input in zip(catch_list, put_list):
-                #做一個訪問全域變數=TRUE才能往下做
                 print('等待檢測')
+                websocket_robot_state('等待檢測結果')
                 while True:
                     if self.request_system()==False:
                         break
@@ -468,26 +484,28 @@ class Yaskawa_control():
                         print(catch_input)
                         self.send_boxcheck(True)
                         break
-                #夾取迴圈
                 while True:
                     motion_state=1
                     if self.request_system()==False:
                         break
                     print('catch第%d次'%(count))
+                    websocket_robot_state('prepare')
+                    websocket_object_count(count)
                     case=1
                     packet[1]=case
                     packet[-7:]=catch_input
                     packet[4]=0
                     result=self.send_data(packet)
                     if result==True:
-                        itemstatus=4
+                        #itemstatus=4
                         break  
-                #放置迴圈
                 while True:
                     motion_state=2
                     if self.request_system()==False:
                         break
                     print('put第%d次'%(count))
+                    websocket_robot_state('operate')
+                    websocket_object_count(count)
                     case=2
                     packet[1]=case
                     packet[-7:]=put_input
@@ -495,10 +513,10 @@ class Yaskawa_control():
                     if result==True:
                         count+=1
                         break   
-
-                if count==count_list or self.request_system()==False:
+                if count==count_list+1 or self.request_system()==False:
                     if self.request_system()==False:
                         print('系統重置')
+                        websocket_robot_state('已重置')
                     else:
                         case=3
                         packet[1]=case
@@ -506,8 +524,8 @@ class Yaskawa_control():
                         packet[-7:]=home_input
                         result=self.send_data(packet)
                         print('回到原點')
+                        websocket_robot_state('結束')
                     break
-        
         self.pause()
         self.reset()
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
