@@ -362,7 +362,7 @@ class Yaskawa_control():
                 #相機函式
                     if sd[0] == name.replace('外箱', '').replace('A', ''):#檢查第一位
                         print("Incoming materials are correct")
-                        websocket_robot_state('檢測正確')
+                        websocket_robot_state('correct')
                         if sd[1]==1:
                             angle=1
                             print("angle:1")
@@ -377,7 +377,7 @@ class Yaskawa_control():
                         itemstatus=2
                         print("Incoming materials are false")
                         
-                        websocket_robot_state('檢測錯誤')
+                        websocket_robot_state('error')
                     
 
     #將上位機數據傳入手臂
@@ -472,7 +472,7 @@ class Yaskawa_control():
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         for catch_input, put_input in zip(catch_list, put_list):
                 print('等待檢測')
-                websocket_robot_state('等待檢測結果')
+                websocket_robot_state('detect')
                 while True:
                     if self.request_system()==False:
                         break
@@ -516,7 +516,7 @@ class Yaskawa_control():
                 if count==count_list+1 or self.request_system()==False:
                     if self.request_system()==False:
                         print('系統重置')
-                        websocket_robot_state('已重置')
+                        websocket_robot_state('reset')
                     else:
                         case=3
                         packet[1]=case
@@ -524,7 +524,6 @@ class Yaskawa_control():
                         packet[-7:]=home_input
                         result=self.send_data(packet)
                         print('回到原點')
-                        websocket_robot_state('結束')
                     break
         self.pause()
         self.reset()

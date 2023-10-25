@@ -242,6 +242,17 @@ def executeRobot(request):
         for i in range(1, order_count + 1):
             print(f'第{i}次')
             websocket_object_count(i)
+            websocket_robot_state('detect')
+            time.sleep(2)
+            
+            if i % 2 == 0:
+                websocket_robot_state('correct')
+            else:
+                websocket_robot_state('error')
+                time.sleep(2)
+                websocket_robot_state('correct')
+            
+            time.sleep(2)
             websocket_robot_state('prepare')
             time.sleep(2)
             websocket_robot_state('operate')
@@ -283,6 +294,7 @@ def robotSetting(request):
             print(mode, robot_speed)
         elif mode == 'reset':
             print(mode)
+            websocket_robot_state('reset')
 
         return Response({}, status=status.HTTP_200_OK)
     except:
