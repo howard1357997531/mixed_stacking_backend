@@ -472,7 +472,10 @@ class Yaskawa_control():
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         for catch_input, put_input in zip(catch_list, put_list):
                 print('等待檢測')
+                websocket_object_count(count)
                 websocket_robot_state('detect')
+                websocket_robot_state('prepare')
+                
                 while True:
                     if self.request_system()==False:
                         break
@@ -489,8 +492,7 @@ class Yaskawa_control():
                     if self.request_system()==False:
                         break
                     print('catch第%d次'%(count))
-                    websocket_robot_state('prepare')
-                    websocket_object_count(count)
+                    
                     case=1
                     packet[1]=case
                     packet[-7:]=catch_input
@@ -505,13 +507,14 @@ class Yaskawa_control():
                         break
                     print('put第%d次'%(count))
                     websocket_robot_state('operate')
-                    websocket_object_count(count)
+                    
                     case=2
                     packet[1]=case
                     packet[-7:]=put_input
                     result=self.send_data(packet)
                     if result==True:
                         count+=1
+                        websocket_object_count(count)
                         break   
                 if count==count_list+1 or self.request_system()==False:
                     if self.request_system()==False:

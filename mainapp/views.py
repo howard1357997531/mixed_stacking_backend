@@ -241,10 +241,11 @@ def executeRobot(request):
         time.sleep(2)
         for i in range(1, order_count + 1):
             print(f'第{i}次')
-            websocket_object_count(i)
+            websocket_object_count(i) 
             websocket_robot_state('detect')
-            time.sleep(2)
-            
+            websocket_robot_state('prepare')
+            time.sleep(10)
+
             if i % 2 == 0:
                 websocket_robot_state('correct')
             else:
@@ -253,13 +254,11 @@ def executeRobot(request):
                 websocket_robot_state('correct')
             
             time.sleep(2)
-            websocket_robot_state('prepare')
-            time.sleep(2)
             websocket_robot_state('operate')
             time.sleep(2)
             
-            if i == 8 :
-                break
+            # if i == 8 :
+            #     break
         # websocket_robot_state('已結束')
         return Response({}, status=status.HTTP_200_OK)
     except:
