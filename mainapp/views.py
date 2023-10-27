@@ -41,10 +41,21 @@ def websocket_object_count(count):
     return async_to_sync(channel_layer.group_send)(
         'count_room',
         {
-            'type': 'robot_count_change',
+            'type': 'object_count_change',
             'count': count
         }
     )
+
+def websocket_object_name(name, nextName):
+    return async_to_sync(channel_layer.group_send)(
+        'count_room',
+        {
+            'type': 'object_name_change',
+            'name': name,
+            'nextName': nextName,
+        }
+    )
+
 
 @api_view(['POST'])
 def controlRobot(request):
@@ -227,7 +238,8 @@ def executeRobot(request):
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
-        order_count = len(order.aiTraining_order.split(','))
+        order_list = order.aiTraining_order.split(',')
+        order_count = len(order_list)
 
         # robot = Yaskawa_control('192.168.1.15', 10040)
         # thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId,))
@@ -238,13 +250,16 @@ def executeRobot(request):
 
         # test
         
-        time.sleep(2)
+        time.sleep(4)
         for i in range(1, order_count + 1):
             print(f'第{i}次')
-            websocket_object_count(i) 
+            websocket_object_count(i)
+            if i != 1:
+                next_name = order_list[i] if i < order_count else ""
+                websocket_object_name(order_list[i - 1], next_name)
             websocket_robot_state('detect')
             websocket_robot_state('prepare')
-            time.sleep(10)
+            time.sleep(3)
 
             if i % 2 == 0:
                 websocket_robot_state('correct')
@@ -257,7 +272,7 @@ def executeRobot(request):
             websocket_robot_state('operate')
             time.sleep(2)
             
-            # if i == 8 :
+            # if i == 1 :
             #     break
         # websocket_robot_state('已結束')
         return Response({}, status=status.HTTP_200_OK)
