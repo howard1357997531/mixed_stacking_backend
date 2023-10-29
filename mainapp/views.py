@@ -250,7 +250,7 @@ def executeRobot(request):
 
         # test
         
-        time.sleep(4)
+        time.sleep(6)
         for i in range(1, order_count + 1):
             print(f'第{i}次')
             websocket_object_count(i)
@@ -259,7 +259,7 @@ def executeRobot(request):
                 websocket_object_name(order_list[i - 1], next_name)
             websocket_robot_state('detect')
             websocket_robot_state('prepare')
-            time.sleep(3)
+            time.sleep(5)
 
             if i % 2 == 0:
                 websocket_robot_state('correct')
