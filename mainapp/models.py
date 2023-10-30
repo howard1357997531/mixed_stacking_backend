@@ -71,6 +71,20 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return self.name
+    
+class MultipleOrder(Common):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    orderSelectId_str = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+    
+class MultipleOrderItem(models.Model):
+    multiple_order = models.ForeignKey(MultipleOrder, on_delete=models.CASCADE, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return str(self.multiple_order)
 
 # class Order(Common):
 #     name = models.CharField(max_length=255, null=True, blank=True)

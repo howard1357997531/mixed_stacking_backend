@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
-from .models import workOrder, aiWorkOrder, Order, OrderItem
+from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem
 
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
@@ -230,6 +230,7 @@ def aiCalculate(request):
     return Response({"worklist_id": worklist_id, "list_order": ai_str, "training_time": training_time})
     # return Response({"worklist_id": worklist_id,  "training_time": training_time})
 
+# ---------------------
 # from .arm.Yaskawa_function import Yaskawa_control
 # import threading
 
@@ -314,7 +315,6 @@ def robotSetting(request):
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
         
-
 @api_view(['GET'])
 def getAiWorkOrderData(request):
     ai_order = aiWorkOrder.objects.all().order_by('-id')
@@ -423,6 +423,29 @@ def getOrderData(request):
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['POST'])
+def createMultipleOrder(request):
+    try:
+        orderSelectIdList = request.data.get('orderSelectId')
+        inputText = request.data.get('inputText')
+        
+        multiple_order = MultipleOrder.objects.create(
+            name = inputText,
+            orderSelectId_str = ','.join(map(str, orderSelectIdList))
+        )
+        multiple_order.save()
+
+        for order in orderSelectIdList:
+            order = Order.objects.filter(id=int(order)).first()
+            MultipleOrderItem.objects.create(
+                multiple_order = multiple_order,
+                order = order
+            )
+
+        return Response({"ok"}, status=status.HTTP_200_OK)
+    except:
+        return Response({"error_msg": "建立失敗，再試一次"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # qrcode
