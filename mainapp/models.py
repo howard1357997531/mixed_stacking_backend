@@ -80,8 +80,8 @@ class MultipleOrder(Common):
         return self.name
     
 class MultipleOrderItem(models.Model):
-    multiple_order = models.ForeignKey(MultipleOrder, on_delete=models.CASCADE, null=True, blank=True)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+    multiple_order = models.ForeignKey(MultipleOrder, on_delete=models.CASCADE, related_name="multipleOrder", null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order", null=True, blank=True)
 
     def __str__(self):
         return str(self.multiple_order)

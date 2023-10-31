@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer
+from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerilaizer, MultipleOrderItemSerilaizer
 from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem
 
 from .robot import main, robot_control, speed
@@ -423,7 +423,14 @@ def getOrderData(request):
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-
+@api_view(['GET'])
+def getMultipleOrderData(request):
+    try:
+        multiple_order = MultipleOrder.objects.all().order_by('-id')
+        serializer = MultipleOrderSerilaizer(multiple_order, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': '取得多單資料失敗'}, status=status.HTTP_400_BAD_REQUEST)
 @api_view(['POST'])
 def createMultipleOrder(request):
     try:
@@ -446,6 +453,7 @@ def createMultipleOrder(request):
         return Response({"ok"}, status=status.HTTP_200_OK)
     except:
         return Response({"error_msg": "建立失敗，再試一次"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # qrcode
