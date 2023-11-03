@@ -11,7 +11,7 @@ angle=0
 
 # ------------------------------
 # web_socket
-from views import websocket_robot_state, websocket_object_count
+from mainapp.views import websocket_robot_state, websocket_object_count, websocket_object_name
 # ------------------------------
 
 ##########################################################################
@@ -54,7 +54,7 @@ def getdata(orderId):
     put_list = []
     posture1=[180.0,0.0,0.0]
     posture2=[180.0,0.0,90.0]
-    count_list=0
+    count_list=1
     for index, row in Supply_columns.iterrows():
         supply_initial = row.to_list()
         Base=[2]
@@ -347,12 +347,16 @@ class Yaskawa_control():
         # --------------------------------
         Supply = pd.read_csv(box_positions_conveyor_path)
         Supply_columns = Supply['matched_box_name']
+        print('supply 1')
         for name in Supply_columns: 
             if self.request_system()==False:
                 itemstatus=0
+                print('supplycheck stop')
                 break
             while True:
+                print('1')
                 if self.request_system()==False:
+                    print('supplycheck inner stop')
                     itemstatus=0
                     break
                 time.sleep(0.1)
@@ -452,10 +456,11 @@ class Yaskawa_control():
 
 ##########################################################################
     #Demo2
-    def Robot_Demo2(self, orderId):
+    def Robot_Demo2(self, orderId, order_list, order_count):
         global itemstatus
         global angle
         global motion_state
+        global robot_state
         self.reset()
         time.sleep(1)
         self.servo()
@@ -472,10 +477,15 @@ class Yaskawa_control():
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         for catch_input, put_input in zip(catch_list, put_list):
                 print('等待檢測')
+                # -----------------------
                 websocket_object_count(count)
+                if count != 1:
+                    next_name = order_list[count] if count < order_count else ""
+                    websocket_object_name(order_list[count - 1], next_name)
                 websocket_robot_state('detect')
                 websocket_robot_state('prepare')
-                
+                #------------------------
+
                 while True:
                     if self.request_system()==False:
                         break
@@ -514,9 +524,10 @@ class Yaskawa_control():
                     result=self.send_data(packet)
                     if result==True:
                         count+=1
-                        websocket_object_count(count)
-                        break   
-                if count==count_list+1 or self.request_system()==False:
+                        break
+                print('count: ', count)
+                print('count_list: ', count_list)
+                if count==count_list or self.request_system()==False:
                     if self.request_system()==False:
                         print('系統重置')
                         websocket_robot_state('reset')

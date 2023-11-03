@@ -86,6 +86,16 @@ class MultipleOrderItem(models.Model):
     def __str__(self):
         return str(self.multiple_order)
 
+class ExecutingOrder(Common):
+    order_id = models.CharField(max_length=255, null=True, blank=True)
+    order_name = models.CharField(max_length=255, null=True, blank=True)
+    order_type = models.CharField(max_length=255, null=True, blank=True)
+    executing_index = models.PositiveIntegerField(default=1)
+    finished = models.BooleanField(default=False)
+
+    def __str__(self):
+        return str(self.order_id)
+
 # class Order(Common):
 #     name = models.CharField(max_length=255, null=True, blank=True)
 #     unique_code = models.CharField(max_length=255, unique=True, null=False, blank=False)

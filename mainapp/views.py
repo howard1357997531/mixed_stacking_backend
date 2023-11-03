@@ -242,15 +242,19 @@ def executeRobot(request):
         order_list = order.aiTraining_order.split(',')
         order_count = len(order_list)
 
-        # robot = Yaskawa_control('192.168.1.15', 10040)
-        # thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId,))
-        # thread1.start()
-        # time.sleep(2)
-        # thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
-        # thread2.start()
+        '''
+        robot = Yaskawa_control('192.168.1.15', 10040)
+        thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count))
+        thread1.start()
+        time.sleep(2)
+        thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
+        thread2.start()
 
-        # test
+        thread2.join()
+        print('python stop!!')
         
+        '''
+        # test
         time.sleep(6)
         for i in range(1, order_count + 1):
             print(f'第{i}次')
@@ -275,7 +279,7 @@ def executeRobot(request):
             
             # if i == 1 :
             #     break
-        # websocket_robot_state('已結束')
+        # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
@@ -286,19 +290,21 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         channel_layer = get_channel_layer()
-        # robot = Yaskawa_control('192.168.1.15', 10040)
-        # if mode == 'pause':
-        #     robot.pause()
-        # elif mode == 'unPause':
-        #     robot.keepgo()
-        # elif mode == 'speedUp' or mode == 'speedDown':
-        #     robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
-        #     robot_speed = 100 if robot_speed > 100 else robot_speed
-        #     speed(robot_speed)
-        # elif mode == 'reset':
-        #     robot.pause()
-        #     robot.reset()
-
+        '''
+        robot = Yaskawa_control('192.168.1.15', 10040)
+        if mode == 'pause':
+            robot.pause()
+        elif mode == 'unPause':
+            robot.keepgo()
+        elif mode == 'speedUp' or mode == 'speedDown':
+            robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
+            robot_speed = 100 if robot_speed > 100 else robot_speed
+            speed(robot_speed)
+        elif mode == 'reset':
+            robot.pause()
+            robot.reset()
+        '''
+        # test
         if mode == 'pause':
             print(mode)
         elif mode == 'unPause':
@@ -310,7 +316,7 @@ def robotSetting(request):
         elif mode == 'reset':
             print(mode)
             websocket_robot_state('reset')
-
+        # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
