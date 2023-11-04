@@ -232,7 +232,33 @@ def aiCalculate(request):
 
 # ---------------------
 # from .arm.Yaskawa_function import Yaskawa_control
-# import threading
+import threading
+
+def robot_test(order_count, order_list):
+    time.sleep(6)
+    for i in range(1, order_count + 1):
+        print(f'第{i}次')
+        websocket_object_count(i)
+        if i != 1:
+            next_name = order_list[i] if i < order_count else ""
+            websocket_object_name(order_list[i - 1], next_name)
+        websocket_robot_state('detect')
+        websocket_robot_state('prepare')
+        time.sleep(5)
+
+        if i % 2 == 0:
+            websocket_robot_state('correct')
+        else:
+            websocket_robot_state('error')
+            time.sleep(2)
+            websocket_robot_state('correct')
+        
+        time.sleep(2)
+        websocket_robot_state('operate')
+        time.sleep(2)
+        
+        # if i == 1 :
+        #     break
 
 @api_view(['POST'])
 def executeRobot(request):
@@ -250,35 +276,16 @@ def executeRobot(request):
         thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
         thread2.start()
 
-        thread2.join()
+        thread1.join(); thread2.join()
         print('python stop!!')
         
         '''
         # test
-        time.sleep(6)
-        for i in range(1, order_count + 1):
-            print(f'第{i}次')
-            websocket_object_count(i)
-            if i != 1:
-                next_name = order_list[i] if i < order_count else ""
-                websocket_object_name(order_list[i - 1], next_name)
-            websocket_robot_state('detect')
-            websocket_robot_state('prepare')
-            time.sleep(5)
-
-            if i % 2 == 0:
-                websocket_robot_state('correct')
-            else:
-                websocket_robot_state('error')
-                time.sleep(2)
-                websocket_robot_state('correct')
-            
-            time.sleep(2)
-            websocket_robot_state('operate')
-            time.sleep(2)
-            
-            # if i == 1 :
-            #     break
+        thread1 = threading.Thread(target=robot_test, args=(order_count, order_list))
+        thread1.start()
+        thread1.join()
+        # robot_test(order_count, order_list)
+        print('python stop!!')
         # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
