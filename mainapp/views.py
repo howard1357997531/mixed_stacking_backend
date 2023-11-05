@@ -234,9 +234,13 @@ def aiCalculate(request):
 # from .arm.Yaskawa_function import Yaskawa_control
 import threading
 
+RESET = False
+
 def robot_test(order_count, order_list):
     time.sleep(6)
     for i in range(1, order_count + 1):
+        if RESET:
+            break
         print(f'第{i}次')
         websocket_object_count(i)
         if i != 1:
@@ -312,6 +316,7 @@ def robotSetting(request):
             robot.reset()
         '''
         # test
+        global RESET
         if mode == 'pause':
             print(mode)
         elif mode == 'unPause':
@@ -321,8 +326,8 @@ def robotSetting(request):
             robot_speed = 100 if robot_speed > 100 else robot_speed
             print(mode, robot_speed)
         elif mode == 'reset':
+            RESET = True
             print(mode)
-            websocket_robot_state('reset')
         # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
