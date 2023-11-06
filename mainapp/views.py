@@ -231,16 +231,19 @@ def aiCalculate(request):
     # return Response({"worklist_id": worklist_id,  "training_time": training_time})
 
 # ---------------------
-# from .arm.Yaskawa_function import Yaskawa_control
+from .arm.Yaskawa_function import Yaskawa_control
 import threading
+from queue import Queue
 
 RESET = False
 
-def robot_test(order_count, order_list):
+def robot_test(order_count, order_list, isFinish_queue):
     time.sleep(6)
     for i in range(1, order_count + 1):
         if RESET:
-            break
+            isFinish_queue.put(False)
+            websocket_robot_state('reset')
+            return
         print(f'第{i}次')
         websocket_object_count(i)
         if i != 1:
@@ -263,35 +266,39 @@ def robot_test(order_count, order_list):
         
         # if i == 1 :
         #     break
+    isFinish_queue.put(True)
+    websocket_robot_state('finish')
 
 @api_view(['POST'])
 def executeRobot(request):
+    global RESET
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
         order_list = order.aiTraining_order.split(',')
         order_count = len(order_list)
+        isFinish_queue = Queue()
 
-        '''
+        # '''
         robot = Yaskawa_control('192.168.1.15', 10040)
-        thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count))
+        thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         thread1.start()
         time.sleep(2)
         thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
         thread2.start()
 
         thread1.join(); thread2.join()
-        print('python stop!!')
-        
         '''
         # test
-        thread1 = threading.Thread(target=robot_test, args=(order_count, order_list))
+        thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
         thread1.start()
         thread1.join()
-        # robot_test(order_count, order_list)
+        RESET = False
+        '''
+        robot_state = "finish" if isFinish_queue.get() else "reset"
         print('python stop!!')
-        # '''
-        return Response({}, status=status.HTTP_200_OK)
+        
+        return Response({"robot_state": robot_state}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -301,7 +308,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         channel_layer = get_channel_layer()
-        '''
+        # '''
         robot = Yaskawa_control('192.168.1.15', 10040)
         if mode == 'pause':
             robot.pause()
@@ -328,7 +335,7 @@ def robotSetting(request):
         elif mode == 'reset':
             RESET = True
             print(mode)
-        # '''
+        '''
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)

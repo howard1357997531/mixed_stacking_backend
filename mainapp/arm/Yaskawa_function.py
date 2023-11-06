@@ -101,26 +101,24 @@ class Yaskawa_control():
         #     print('success')
     #即時控制用#
     ########################   
-    def servo(self):
-        self.send_control('01')
-        self.send_control('05')
-        
-    def keepgo(self):
-        global robot_state
-        robot_state=True
-        self.send_control('15')
+    def start(self):
+        self.robot_state=True
+        self.send_control('03')
+        self.send_control('07')
 
     def pause(self):
-        self.send_control('07')
-        self.send_control('05')
+        self.send_control('0F')
+
+    def keepgo(self):
+        self.robot_state=True
+        self.send_control('03')
+        self.send_control('17')
 
     def reset(self):
-        global robot_state
-        self.send_control('07')
-        self.send_control('00')
-        self.send_control('25')
-        self.send_control('00')
-        robot_state=False
+        self.send_control('0F')
+        self.send_control('03')#很重要
+        self.send_control('20')
+        self.robot_state=False
 
     def close(self):
         self.client_socket.close()
@@ -313,14 +311,14 @@ class Yaskawa_control():
                     break     
                 if self.request_robotsignal()==True:
                     print('Robot recieve_data success')
-                    if motion_state==1:
-                        itemstatus=3
                     self.PCsignal(False )
                     time.sleep(0.05) 
                     while True:
                         if self.request_robotsignal()==False:
                             print(self.request_robotsignal())
                             robotsignal=True
+                            if motion_state==1:
+                                itemstatus=3
                             print('Robot action finish')
                             break
                         if self.request_system()==False:
@@ -354,7 +352,7 @@ class Yaskawa_control():
                 print('supplycheck stop')
                 break
             while True:
-                print('1')
+                # print('1')
                 if self.request_system()==False:
                     print('supplycheck inner stop')
                     itemstatus=0
@@ -380,7 +378,6 @@ class Yaskawa_control():
                         #錯誤
                         itemstatus=2
                         print("Incoming materials are false")
-                        
                         websocket_robot_state('error')
                     
 
@@ -456,15 +453,14 @@ class Yaskawa_control():
 
 ##########################################################################
     #Demo2
-    def Robot_Demo2(self, orderId, order_list, order_count):
+    def Robot_Demo2(self, orderId, order_list, order_count, isFinish_queue):
         global itemstatus
         global angle
         global motion_state
         global robot_state
         self.reset()
         time.sleep(1)
-        self.servo()
-        self.keepgo()
+        self.start()
         print('等待初始化')
         while True:
             if self.request_system()==False:
@@ -509,7 +505,6 @@ class Yaskawa_control():
                     packet[4]=0
                     result=self.send_data(packet)
                     if result==True:
-                        #itemstatus=4
                         break  
                 while True:
                     motion_state=2
@@ -530,7 +525,9 @@ class Yaskawa_control():
                 if count==count_list or self.request_system()==False:
                     if self.request_system()==False:
                         print('系統重置')
-                        websocket_robot_state('reset')
+                        # --------------------
+                        isFinish_queue.put(False)
+                        # --------------------
                     else:
                         case=3
                         packet[1]=case
@@ -538,6 +535,9 @@ class Yaskawa_control():
                         packet[-7:]=home_input
                         result=self.send_data(packet)
                         print('回到原點')
+                        # --------------------
+                        isFinish_queue.put(True)
+                        # --------------------
                     break
         self.pause()
         self.reset()
