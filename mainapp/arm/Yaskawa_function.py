@@ -320,6 +320,7 @@ class Yaskawa_control():
                             if motion_state==1:
                                 itemstatus=3
                             print('Robot action finish')
+                            websocket_robot_state('detect')
                             break
                         if self.request_system()==False:
                             print('STOP3')
@@ -475,10 +476,11 @@ class Yaskawa_control():
                 print('等待檢測')
                 # -----------------------
                 websocket_object_count(count)
-                if count != 1:
+                if count == 1:
+                    websocket_robot_state('detect')
+                else:
                     next_name = order_list[count] if count < order_count else ""
                     websocket_object_name(order_list[count - 1], next_name)
-                websocket_robot_state('detect')
                 websocket_robot_state('prepare')
                 #------------------------
 

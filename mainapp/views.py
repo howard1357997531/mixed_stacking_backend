@@ -231,7 +231,7 @@ def aiCalculate(request):
     # return Response({"worklist_id": worklist_id,  "training_time": training_time})
 
 # ---------------------
-from .arm.Yaskawa_function import Yaskawa_control
+# from .arm.Yaskawa_function import Yaskawa_control
 import threading
 from queue import Queue
 
@@ -279,7 +279,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
 
-        # '''
+        '''
         robot = Yaskawa_control('192.168.1.15', 10040)
         thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         thread1.start()
@@ -294,7 +294,7 @@ def executeRobot(request):
         thread1.start()
         thread1.join()
         RESET = False
-        '''
+        # '''
         robot_state = "finish" if isFinish_queue.get() else "reset"
         print('python stop!!')
         
@@ -307,8 +307,7 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        channel_layer = get_channel_layer()
-        # '''
+        '''
         robot = Yaskawa_control('192.168.1.15', 10040)
         if mode == 'pause':
             robot.pause()
@@ -335,7 +334,7 @@ def robotSetting(request):
         elif mode == 'reset':
             RESET = True
             print(mode)
-        '''
+        # '''hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
