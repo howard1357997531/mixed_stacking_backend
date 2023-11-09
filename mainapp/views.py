@@ -334,7 +334,7 @@ def robotSetting(request):
         elif mode == 'reset':
             RESET = True
             print(mode)
-        # '''hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+        # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
