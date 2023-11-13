@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerilaizer, MultipleOrderItemSerilaizer
-from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem
+from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, ExecutingOrder
 
 from .robot import main, robot_control, speed
 # from .main_result_20230830 import activate_cal
@@ -338,7 +338,17 @@ def robotSetting(request):
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+@api_view(['POSt'])
+def executingOrder(request):
+    try:
+        print(request.data)
+        print(request.data.get('name'))
+        print(request.data.get('allData'))
+        return Response({}, status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': "fail"}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 def getAiWorkOrderData(request):
     ai_order = aiWorkOrder.objects.all().order_by('-id')
@@ -450,6 +460,7 @@ def getMultipleOrderData(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '取得多單資料失敗'}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['POST'])
 def createMultipleOrder(request):
     try:
