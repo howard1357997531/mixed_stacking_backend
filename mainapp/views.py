@@ -238,7 +238,7 @@ from queue import Queue
 RESET = False
 
 def robot_test(order_count, order_list, isFinish_queue):
-    time.sleep(6)
+    time.sleep(2)
     for i in range(1, order_count + 1):
         if RESET:
             isFinish_queue.put(False)
@@ -257,7 +257,7 @@ def robot_test(order_count, order_list, isFinish_queue):
             websocket_robot_state('correct')
         else:
             websocket_robot_state('error')
-            time.sleep(2)
+            time.sleep(4)
             websocket_robot_state('correct')
         
         time.sleep(2)
