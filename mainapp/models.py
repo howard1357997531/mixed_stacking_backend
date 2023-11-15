@@ -57,6 +57,7 @@ class Order(Common):
     csv_file = models.FileField(upload_to=upload_to, null=True, blank=True)
     aiTraining_order = models.CharField(max_length=255, null=True, blank=True)
     aiTraining_state = models.CharField(max_length=180, choices=AI_TRAINING_STATE_CHOICES, default='no_training')
+    is_today_latest = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

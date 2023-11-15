@@ -379,6 +379,17 @@ def uploadCsv(request):
             # 若用 csv_file.seek(0) 雖然會指到開頭但只能讀一行又會跑到最尾
             csv_content = csv_file.read().decode('utf-8')
 
+            # 如果用一次固定時間，然後對所有供單最後設為is_today_latest=true會發生問題
+            # 因為有可能有過00:00(隔天)問題，可能要每存一次csv都要檢查一次時間
+            today = datetime.datetime.now()
+            today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
+                        createdAt__day=today.day)
+            today_order_has_latest = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
+                        createdAt__day=today.day, is_today_latest=True)
+            
+            if today_order_has_latest.exists():
+                today_order.update(is_today_latest=False)
+
             order = Order.objects.create(
                 name=csv_name,
                 unique_code=unique_code,
