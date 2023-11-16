@@ -6,12 +6,6 @@ import numpy as np
 # import cv2
 import time
 
-# -------------
-from django.conf import settings
-import os
-
-box_volume_path = os.path.join(settings.MEDIA_ROOT, 'camera', 'box volumn.csv')
-# -------------
 
 
 class Dimension_3D():
@@ -26,11 +20,9 @@ class Dimension_3D():
         self.image = None
         self.method = 'np'
         if self.method == 'pd':
-            # self.true = pd.read_csv(r'./box volumn.csv')
-            self.true = pd.read_csv(box_volume_path)
+            self.true = pd.read_csv(r'./box volumn.csv')
         else:
-            # true = np.genfromtxt('./box volumn.csv', delimiter = ',')
-            true = np.genfromtxt(box_volume_path, delimiter = ',')
+            true = np.genfromtxt('./box volumn.csv', delimiter = ',')
             self.true = true[1:,:-1]
         self.bg_img = np.full((900,1600,3),0).astype(np.uint8)
 

@@ -284,7 +284,7 @@ def executeRobot(request):
         thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         thread1.start()
         time.sleep(2)
-        thread2 = threading.Thread(target=robot.supplycheck, args=(orderId,))
+        thread2 = threading.Thread(target=robot.supplycheck)
         thread2.start()
 
         thread1.join(); thread2.join()
@@ -478,6 +478,12 @@ def createMultipleOrder(request):
         orderSelectIdList = request.data.get('orderSelectIdArray')
         inputText = request.data.get('inputText')
         max_id = MultipleOrder.objects.aggregate(Max("id"))
+        today = datetime.datetime.now()
+        today_mult_order = MultipleOrder.objects.filter(createdAt__year=today.year,
+                        createdAt__month=today.month, createdAt__day=today.day, is_today_latest=True)
+        
+        if today_mult_order.exists():
+            today_mult_order.update(is_today_latest=False)
 
         multiple_order = MultipleOrder.objects.create(
             name = inputText,

@@ -1,38 +1,66 @@
 import socket
+import asyncio
 import time
 import pandas as pd
-import csv
-from .main import cameraCheck
-
-robot_state=True
-motion_state=0
-itemstatus=0
-angle=0
+import time
+from .Dimension_2_3D_single import Dimension_2_3D
+from .Dimension_3D_single import Dimension_3D
+import cv2
+import numpy as np
+from .camera import intelCamera_copy
+from .qrcode import qrClass
+import threading
 
 # ------------------------------
 # web_socket
 from mainapp.views import websocket_robot_state, websocket_object_count, websocket_object_name
 # ------------------------------
 
+process = True
+try:
+    camera = intelCamera_copy.L515() 
+except:
+     process = False
+     pass
+config =  {
+            "resolution":"1080p",
+            "fps":"15",
+            "depthMode":"WFOV",
+            "algin":"color"
+        }
+        
+
+#camera = azuredkCamera.azureDK(config)
+try:
+	camera.openCamera()
+except :
+    process = False
+        
+    print('No Camera')
+
+crop = {'xmin' :150, 'xmax':1920,'ymin':450, 'ymax':790, 'total height':495}
+
+dimenssion_object = Dimension_2_3D(crop = crop)
+qr_object = qrClass(crop = crop)
+
+dimenssion_3D_object = Dimension_3D(crop = crop)
+
+
 ##########################################################################
 # data process
 def decimal_to_hex(decimal):
-        hex_string = hex(decimal & 0xFFFFFFFF)[2:]  
-        hex_padded = hex_string.zfill(8)
-        hex_reversed = hex_padded[6:8] + hex_padded[4:6] + hex_padded[2:4] + hex_padded[0:2]
-        hex_formatted = ' '.join(hex_reversed[i:i+2] for i in range(0, len(hex_reversed), 2))
-        return hex_formatted
+    hex_string = hex(decimal & 0xFFFFFFFF)[2:]  
+    hex_padded = hex_string.zfill(8)
+    hex_reversed = hex_padded[6:8] + hex_padded[4:6] + hex_padded[2:4] + hex_padded[0:2]
+    hex_formatted = ' '.join(hex_reversed[i:i+2] for i in range(0, len(hex_reversed), 2))
+    return hex_formatted
 
 def decimal_to_hex1(decimal):
-        hex_string = hex(decimal & 0xFFFFFFFF)[2:] 
-        hex_padded = hex_string.zfill(2)
-        hex_reversed = hex_padded[0:2]
-        hex_formatted = ' '.join(hex_reversed[i:i+2] for i in range(0, len(hex_reversed), 2))
-        return hex_formatted
-
-def status():
-        global itemstatus
-        return itemstatus
+    hex_string = hex(decimal & 0xFFFFFFFF)[2:] 
+    hex_padded = hex_string.zfill(2)
+    hex_reversed = hex_padded[0:2]
+    hex_formatted = ' '.join(hex_reversed[i:i+2] for i in range(0, len(hex_reversed), 2))
+    return hex_formatted
 
 # -----------------------
 from django.conf import settings
@@ -45,34 +73,31 @@ def getdata(orderId):
     box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
     box_positions_final_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_final.csv')
     # -----------------------
-
     Supply = pd.read_csv(box_positions_conveyor_path)
     Place = pd.read_csv(box_positions_final_path)
     Supply_columns = Supply[['pos_x', 'pos_y', 'pos_z']]
     Place_columns = Place[['bin_name','X_cog', 'Y_cog', 'Z_cog','orientation']]
+
     catch_list = []
     put_list = []
     posture1=[180.0,0.0,0.0]
     posture2=[180.0,0.0,90.0]
     count_list=1
+
     for index, row in Supply_columns.iterrows():
         supply_initial = row.to_list()
         Base=[2]
         supply_data=Base+supply_initial+posture1    
         catch_list.append(supply_data)
+
     for index, row in Place_columns.iterrows():
         place_initial = row.to_list()
-        if  place_initial[4]== 1.0:
-            posture=posture2
-        else :
-            posture=posture1    
-        if place_initial[0]==1:
-            Base=[3]
-        else:
-            Base=[4]
+        posture = posture2 if place_initial[4] == 1.0 else posture1    
+        Base = [3] if place_initial[0] == 1 else [4]
         place_data=Base+place_initial[1:4]+posture
         put_list.append(place_data)
         count_list+=1
+
     return (catch_list,put_list,count_list)
 ##########################################################################
 class Yaskawa_control():
@@ -80,400 +105,404 @@ class Yaskawa_control():
     def __init__(self, ip ,port):
         self.server_ip = ip
         self.server_port = port
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # --------------------
-        # self.orderId = orderId
-        # --------------------
+        self.client_socket0 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.name_list=[]
+        self.angle_checked=[]
+        self.checkangle=0
+        self.name_checked=[]
+        self.name_wrong=[]
+        self.motion_state=0
+        self.Pc_checked=False
+        self.Pc_system=False
+        self.Order_checked=False
+        self.removelock=False
+        self.controllock=False
+        self.commandlock=False
+        self.lock=threading.Lock()
+        self.lock1=threading.Lock()
+        self.thread0=threading.Thread(target=self.control_response)
+        ########################上位機-機器人########################
+        self.Pc_servo=0
+        self.Pc_control=0
+        self.Pc_start=False
+        self.Pc_pause=False
+        self.Pc_keepgo=False
+        self.Pc_reset=False
+        self.Pc_command=0
+        self.Pc_boxchecked=False
+        self.Pc_wrong=False
+        self.Pc_send=False
+        # self.Pc_speed=20
 
-    def send_packet(self,data_packet):
-        self.client_socket.sendto(data_packet, (self.server_ip, self.server_port))
-        response, addr = self.client_socket.recvfrom(1024)
-        return response
-   
-    #控制用命令
-    def send_control(self, control_input):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8D 0A 01 10 00 00 " + control_input.replace(" ", ""))
-        response = self.send_packet(data_packet) 
-        RES = str('5945524320000000030101010000008039393939393939398200000000000000')
-        # if response.hex() == RES:
-        #     print('fail')
-        # else:
-        #     print('success')
+        self.Robot_start=False#100
+        self.Robot_initial=False#101
+        self.Robot_received=False#102
+        self.Robot_motion=False#103
+        self.Robot_boxchecked=False#104
+
+        #in(9)~in(11)
+        self.Robot_sensor1=False
+        self.Robot_sensor2=False
+        self.Robot_sensor3=False
+        ########################上位機-機器人########################
+        ########################前台-上位機########################
+        self.Pc_catch=False
+        self.Pc_put=False
+        self.Pc_finish=False
+        self.frontend_display=0
+        self.frontend_boxnumber=0
+        self.frontend_start=False
+        self.frontend_pause=False
+        self.frontend_keepgo=False
+        self.frontend_reset=False
+        self.frontend_catch=False
+        self.frontend_put=False
+        self.frontend_finish=False
+        ########################前台-上位機########################
+
+    async def send_position(self, data_D):
+        position_mapping = {'process': '11', 'case': '12', 'userbase': '10', 'X': '04', 'Y': '05', 'Z': '06', 'A': '07', 'B': '08', 'C': '09'}
+
+        for position, value in data_D.items():
+            decimal_value = int(value * (1 if position in ['process', 'case', 'userbase'] else 1000 if position in ['X', 'Y', 'Z'] else 10000))
+            hex_value = decimal_to_hex(decimal_value)
+
+            data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 {position_mapping[position]} 00 01 02 00 00 " + hex_value.replace(" ", ""))
+            self.client_socket3.sendto(data_packet, (self.server_ip, self.server_port))
+
+            await asyncio.sleep(0.01)
+
+    async def send_control(self):
+        while not self.Pc_finish:
+            self.Pc_control= (self.Pc_reset << 5) + (self.Pc_keepgo << 4) + (self.Pc_pause << 3)+ (self.Pc_start << 2)+ self.Pc_servo
+            Pc_control_string = decimal_to_hex1(self.Pc_control)
+            data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8D 0A 01 10 00 00 " + Pc_control_string.replace(" ", ""))
+            self.client_socket0.sendto(data_packet, (self.server_ip, self.server_port)) 
+            response, addr = self.client_socket0.recvfrom(1024)
+            # response_R = response.hex()[-18:]
+            # print(response.hex())
+            await asyncio.sleep(0)
+       
+    async def send_command(self):
+        while not self.Pc_finish:
+            self.Pc_command= (self.Pc_send << 2) + (self.Pc_wrong << 1) + self.Pc_boxchecked
+            Pc_command_string = decimal_to_hex1(self.Pc_command)
+            data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8E 0A 01 10 00 00 " + Pc_command_string.replace(" ", ""))
+            self.client_socket1.sendto(data_packet, (self.server_ip, self.server_port)) 
+            response, addr = self.client_socket1.recvfrom(1024)
+            # response_R = response.hex()[-18:]
+            # print(response.hex() )
+            await asyncio.sleep(0)    
+
+    async def request_response(self):
+        I=0
+        while not self.Pc_finish:
+            data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 32 00 01 0E 00 00 00" )
+            self.client_socket2.sendto(data_packet, (self.server_ip, self.server_port))
+            response, addr = self.client_socket2.recvfrom(1024)
+            response_R = response.hex()[-24:-4]
+            if response_R[:2]=='8e':
+                signal_hex = response_R[-4:]
+                hex_reversed = signal_hex[2:4] + signal_hex[0:2]
+                signal_int = int(hex_reversed,16)
+                signal_binary = bin(signal_int)[2:].zfill(16)
+                self.Robot_start=bool(int(signal_binary[-1]))
+                self.Robot_initial=bool(int(signal_binary[-2]))
+                self.Robot_received=bool(int(signal_binary[-3]))
+                self.Robot_motion=bool(int(signal_binary[-4]))
+                self.Robot_boxchecked=bool(int(signal_binary[-5]))
+                self.Robot_sensor1=bool(int(signal_binary[-9]))
+                self.Robot_sensor2=bool(int(signal_binary[-10])) 
+                self.Robot_sensor3=bool(int(signal_binary[-11]))
+                I=I+1
+                print(I)
+                await asyncio.sleep(0)
+            else:
+                print('fail')
+     
+    def control_response(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        task1 = self.send_control()
+        task2 = self.send_command()
+        task3 = self.request_response()
+        loop.run_until_complete(asyncio.gather(task1,task2,task3,))  
+    
     #即時控制用#
     ########################   
     def start(self):
-        self.robot_state=True
-        self.send_control('03')
-        self.send_control('07')
+        self.Pc_system=True
+        self.Pc_servo=3
+        self.Pc_start=True
 
     def pause(self):
-        self.send_control('0F')
+        self.Pc_keepgo=False
+        self.Pc_pause=True
 
     def keepgo(self):
-        self.robot_state=True
-        self.send_control('03')
-        self.send_control('17')
+        self.Pc_pause=False
+        self.Pc_keepgo=True
+        self.Pc_start=False
+        time.sleep(0.1)
+        self.Pc_start=True
 
     def reset(self):
-        self.send_control('0F')
-        self.send_control('03')#很重要
-        self.send_control('20')
-        self.robot_state=False
+        self.Pc_keepgo=False
+        self.Pc_pause=True
+        time.sleep(0.1)
+        self.Pc_start=False
+        self.Pc_servo=0
+        self.Pc_reset=True
+        time.sleep(0.1)
+        self.Pc_pause=False
+        self.Pc_reset=False
+        self.Pc_system=False
 
-    def close(self):
-        self.client_socket.close()
-        print("Connection closed.")
+    #整合視覺#
+    ########################   
+    async def main(self):
+        count = 0
+        #out_raw = cv2.VideoWriter(f"recording.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (1920, 1080))
+        if not process:
+            return None
 
-    def speed(self,D_data):
+        for idx_, i in enumerate(camera.getData()):	
+            if not i :
+                continue
+            start_ = time.time()
+
+            image, pc , depth_image =  i
+            image_crop = image[crop['ymin']:crop['ymax'], crop['xmin']:crop['xmax']]    
+            # cv2.imshow('image_crop', image_crop)
+            # cv2.waitKey(1)
+            if  self.Robot_sensor1:
+                Box_id=['#0']
+                angle=str(-1)
+                return Box_id,angle
+              
+            
+            if True:
+
+
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                image_copy = np.copy(image)
+                
+
+
+                startdecodetime = time.time()
+                dbrcount = qr_object.decode_dbrcount(image)
+                pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
+                enddecodetime =  time.time()
+                print(dbrcount, pyzbarcount)
+                twodecodetime=enddecodetime -startdecodetime
+                # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
+                # # Calculate frames per second
+                fps2  = 1 / twodecodetime
+                # print( "Estimated  twodecodetime cv2 frames per second : {0}".format(fps2))
+
+                # two detect count equal can show
+                if dbrcount == pyzbarcount:
+
+                    #
+                    #image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image.copy(), pc)
+                    image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)
+
+                    if boxID_list and angle_list:
+                        qr_dict = {'box_id': boxID_list, 'angle': angle_list}
+                    else:
+                        qr_dict = {'box_id': '0', 'angle': '-1'}
+
+                    box_id = qr_dict['box_id']
+                    angle = qr_dict['angle']
+                    cv2.putText(image, f"ID: {box_id}, angle: {angle}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
+                    cv2.imshow('image',image)
+                    Box_id = ['#' + item for item in box_id]
+                    print(Box_id,angle)
+
+                    return Box_id,angle
+            await asyncio.sleep(0.3)       
+
+    async def supplycheck(self):
+        self.frontend_display=4
+        # ------------------------------
+        websocket_robot_state('detect')
+        # ------------------------------
+        while self.Pc_system:  
+            if self.Robot_sensor3 and not self.removelock and not self.Robot_sensor1:
+                print('開始檢測')
+                self.Pc_checked=True
+                result = await asyncio.create_task(self.main())
+                # result = self.main()
+                if result[0][0] != '#0'or result[1] != '-1':                
+                    while self.Pc_system:
+                        Box_ID = result[0][:]
+                        Box_angle = result[1][:]
+
+                        for item in self.name_checked:
+                            if item in Box_ID:
+                                Box_ID.remove(item)
+                                await asyncio.sleep(0)
+                        for item in self.angle_checked:
+                            if item in Box_angle:
+                                Box_angle.remove(item)
+                                await asyncio.sleep(0)
+
+                        if len(Box_ID)!=0:
+                            if self.name_list[0] == Box_ID[0]:
+                                self.name_checked.append(self.name_list.pop(0))
+                                self.angle_checked.append(Box_angle[0])
+                                print('Box correct:',self.name_checked,self.angle_checked)
+                                # ------------------------------
+                                websocket_robot_state('correct')          
+                                # ------------------------------
+                                self.frontend_boxnumber+=1
+                                #正確
+                                self.frontend_display=1
+                            else:
+                                #錯誤
+                                self.frontend_display=2
+                                # self.name_wrong.appendmoc(Box_ID[0])
+                                print('Box false:',result[0])
+                                # ------------------------------
+                                websocket_robot_state('error')          
+                                # ------------------------------
+                                break
+                        
+                        else:
+                            break
+                        await asyncio.sleep(0.5)
+                        self.frontend_display=3
+                self.Pc_checked=False
+            await asyncio.sleep(0.5)  
+        self.frontend_display=0
+
+    def thread2_supplycheck(self):
+        asyncio.run(self.supplycheck())
+
+    def Pc_speed(self,D_data):
         D_data=D_data*50
         D_data_hex= decimal_to_hex(D_data)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 01 00 01 02 00 00  " + D_data_hex.replace(" ", ""))
-        self.send_packet(data_packet)
-        return D_data
+        self.client_socket4.sendto(data_packet, (self.server_ip, self.server_port))
+
     ####################### 
-    #D23 單個D傳值測試
-    def sendD23(self,D_data):
-        D_data_hex= decimal_to_hex(D_data)
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 17 00 01 02 00 00  " + D_data_hex.replace(" ", ""))
-        self.send_packet(data_packet)
+    def frontend_motion(self):
+        self.frontend_start=self.Pc_start
+        self.frontend_pause=self.Pc_pause
+        self.frontend_keepgo=self.Pc_keepgo
+        self.frontend_reset=self.Pc_reset
+        self.frontend_catch=self.Pc_catch
+        self.frontend_put=self.Pc_put
+        self.frontend_finish=self.Pc_finish      
+    #流程檢查
+    async def process_track(self):
+        status=False
+        self.Pc_send=True
 
-    #D格式資料處理+傳送
-    def Dword_packet(self,data_D):
-        for position, value in data_D.items():
-            if position in ['process']:
-                decimal_value = int(value * 1)
-            elif position in ['case']:
-                decimal_value = int(value * 1)
-            elif position in ['userbase']:
-                decimal_value = int(value * 1)
-            elif position in ['X', 'Y', 'Z']:
-                decimal_value = int(value * 1000)
-            else:
-                decimal_value = int(value * 10000)
-            hex_value = decimal_to_hex(decimal_value)
-            #print(hex_value)
-
-            Datalengh_mapping = {'process': '04','case': '04','userbase': '04','X': '04','Y': '04','Z': '04','A': '04','B': '04','C': '04'}#資料長度
-            position_mapping = {'process': '11','case': '12','userbase': '10','X': '04','Y': '05','Z': '06','A': '07','B': '08','C': '09'}#座標編號
-            Write_mapping = '02'
-
-            data_packet = bytes.fromhex(f"59 45 52 43 20 00 {Datalengh_mapping[position]} 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 {position_mapping[position]} 00 01 {Write_mapping}  00 00 " + hex_value.replace(" ", ""))
-            self.send_packet(data_packet)
-            #print(f"Received response from MOTOMAN robot: {response.hex()}") 
-                         
-    #上位機訊號
-    def PCsignal(self,a):
-        signal=decimal_to_hex1(a)
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 08 00 01 02 00 00  " + signal.replace(" ", ""))
-        self.send_packet(data_packet)
-
-    #讀取座標暫存器:B8
-    def request_PCsignal(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 08 00 01 01 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        # print(f"Received response from MOTOMAN robot: {response.hex()}")
-        if response_R[:2]=='81':
-            if response_R.endswith("01"):
-                status=True
-            else:
-                status=False
-            return status
-          
-    #B011為TRUE才需要校正
-    def send_boxcheck(self,a):
-        signal=decimal_to_hex1(a)
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 0B 00 01 02 00 00  " + signal.replace(" ", ""))
-        self.send_packet(data_packet)
-
-    #B012檢查狀態1正確 2錯誤 3下一個
-    def sendB12(self,a):
-        signal=decimal_to_hex1(a)
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 0C 00 01 02 00 00  " + signal.replace(" ", ""))
-        self.send_packet(data_packet)
-
-    #讀取網域輸入信號'00'break全部迴圈   
-    def request_robotsystem(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8D 0A 01 0E 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        #print(f"Received response from MOTOMAN robot: {response.hex()}")
-        last_char = response_R[-1]
-        status = int(last_char, 16)
-        return status
-    
-    #檢查系統狀態
-    def request_system(self):
-        global robot_state
-        if robot_state:
-            status=True
-        else:
-            # The above code is declaring a variable `status` and assigning it the value `False`.
-            status=False
-        return status 
-    #狀態請求
-    def request_sendB12(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 0C 00 01 01 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()
-        last_digit = int(response_R[-1])
-        return last_digit 
-       
-    #機器人接收/動作暫存器:B100
-    def request_robotsignal(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 64 00 01 01 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        #print(f"Received response from MOTOMAN robot: {response.hex()}")
-        if response_R[:2]=='81':
-            if response_R.endswith("01"):
-                status=True
-            else:
-                status=False
-            return status
+        while self.Pc_system:
+            if self.Robot_received:
+                print('send command recieved')
             
-    #讀取機器人是否初始化
-    def request_Initial(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 67 00 01 01 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        #print(f"Received response from MOTOMAN robot: {response.hex()}")
-        if response_R[:2]=='81':
-            if response_R.endswith("01"):
-                status=True
-            else:
-                status=False
-            return status
-           
-    #sensor訊號:in(9)
-    def request_sensor9(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        #print(f"Received response from MOTOMAN robot: {response.hex()}")
-        if response_R[:2]=='8e':
-            signal_hex = response_R[-2:]
-            signal_int = int(signal_hex, 16)
-            signal_binary = bin(signal_int)[2:].zfill(8) 
-            if signal_binary[-1] == '1':
-                status=True
-            else:
-                status=False
-            return status
-          
-    #sensor訊號:in(10)
-    def request_sensor10(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        #print(f"Received response from MOTOMAN robot: {response.hex()}")
-        if response_R[:2]=='8e':
-            signal_hex = response_R[-2:]
-            signal_int = int(signal_hex, 16)
-            signal_binary = bin(signal_int)[2:].zfill(8) 
-            if signal_binary[-2] == '1':
-                status=True
-            else:
-                status=False
-            return status
-          
-    #sensor訊號:in(11)
-    def request_sensor11(self):
-        data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 D4 07 01 0E 00 00 00" )
-        response=self.send_packet(data_packet)
-        response_R = response.hex()[-18:]
-        # print(f"Received response from MOTOMAN robot: {response.hex()}")
-        # print(response_R)
-        if response_R[:2]=='8e':
-            signal_hex = response_R[-2:]
-            signal_int = int(signal_hex,16)
-            signal_binary = bin(signal_int)[2:].zfill(8) 
-            if signal_binary[-3] == '1':
-                status=True
-            else:
-                status=False
-            return status
-        
-    #訊號檢查
-    def handshake(self):
-        global itemstatus
-        global motion_state
-        self.PCsignal(True)
-        sendsignal=False
-        robotsignal=False
-        time.sleep(0.05) 
-        if self.request_PCsignal()==True:
-            sendsignal=True
-            print('send_packet success')
-            while True:
-                if self.request_system()==False:
-                    print('STOP2')
-                    break     
-                if self.request_robotsignal()==True:
-                    print('Robot recieve_data success')
-                    self.PCsignal(False )
-                    time.sleep(0.05) 
-                    while True:
-                        if self.request_robotsignal()==False:
-                            print(self.request_robotsignal())
-                            robotsignal=True
-                            if motion_state==1:
-                                itemstatus=3
-                            print('Robot action finish')
-                            websocket_robot_state('detect')
-                            break
-                        if self.request_system()==False:
-                            print('STOP3')
-                            break
-                if robotsignal==True and sendsignal==True:
-                    print('send_packet next time')
-                    break
-        else:
-            print('send_packet fail')
-            sendsignal=False
-            robotsignal=False    
-        return (sendsignal,robotsignal)
+                while self.Pc_system:
+                    if self.Robot_motion:
+                        self.Pc_send=False
+                        print('Robot recieve then in action')
+
+                        while self.Pc_system:
+                            if not self.Robot_motion:
+                                print('Robot action finish')
+                                break
+                            await asyncio.sleep(0.01)
+                        print('send_packet next time')
+                        status=True
+                        return status
+                    await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
+
+    async def motion(self,case,position,checkangle):
+        packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        packet[1]=case
+        packet[-7:]=position
+
+        if case==1:
+            if checkangle==1:
+                packet[3], packet[4] = packet[4], packet[3]
+                packet[-1:]=[90.0]
+            packet[4]=0
+
+        print(packet)
+        packet_dict={'process':packet[0],'case':packet[1],'userbase':packet[2],'X':packet[3],
+                     'Y':packet[4],'Z':packet[5],'A':packet[6],'B':packet[7],'C':packet[8]}
+         
+        await asyncio.create_task(self.send_position(packet_dict))
+
+        result = await asyncio.create_task(self.process_track())
+
+        return result
     
-    #工單檢查函式
-    def supplycheck(self, orderId):
-        global itemstatus
-        global robot_state
-        global angle
-        itemstatus=5
-        robot_state=True
+    async def Camera_orderchecked(self):
+
+        while self.Pc_system:
+
+            if not self.Pc_checked  and not len(self.name_checked)==0 and self.Robot_sensor1:
+                self.removelock=True
+                self.Pc_boxchecked=True
+
+                self.checkangle = 1 if self.angle_checked[0]== 1 else 0
+            
+                print('移除前:',self.name_checked, self.angle_checked)
+                self.name_checked.pop(0)
+                self.angle_checked.pop(0)
+                break
+                
+            await asyncio.sleep(0.1)
+
+    #Demo2    
+    def Robot_Demo2(self, orderId, order_list, order_count, isFinish_queue):
         # --------------------------------
         box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
         # --------------------------------
         Supply = pd.read_csv(box_positions_conveyor_path)
-        Supply_columns = Supply['matched_box_name']
-        print('supply 1')
-        for name in Supply_columns: 
-            if self.request_system()==False:
-                itemstatus=0
-                print('supplycheck stop')
-                break
-            while True:
-                # print('1')
-                if self.request_system()==False:
-                    print('supplycheck inner stop')
-                    itemstatus=0
-                    break
-                time.sleep(0.1)
-                if itemstatus !=1 and self.request_sensor11():
-                    print('開始檢測')
-                    sd = cameraCheck()
-                #相機函式
-                    if sd[0] == name.replace('外箱', '').replace('A', ''):#檢查第一位
-                        print("Incoming materials are correct")
-                        websocket_robot_state('correct')
-                        if sd[1]==1:
-                            angle=1
-                            print("angle:1")
-                        else:
-                            angle=0
-                            print("angle:0")
-                        #正確
-                        itemstatus=1
-                        break
-                    else:
-                        #錯誤
-                        itemstatus=2
-                        print("Incoming materials are false")
-                        websocket_robot_state('error')
-                    
+        Supply_namecolumns = Supply['matched_box_name']
+        name_list1=[]
+        for name in Supply_namecolumns:
+            name_list1.append(name)
+        self.name_list=name_list1[:]
 
-    #將上位機數據傳入手臂
-    def send_data(self,D_data):   
-        print(D_data)
-        data_dict={'process':D_data[0],'case':D_data[1],'userbase':D_data[2],'X':D_data[3],'Y':D_data[4],'Z':D_data[5],'A':D_data[6],'B':D_data[7],'C':D_data[8]}
-        self.Dword_packet(data_dict)
+        asyncio.run(self.R1(orderId, order_list, order_count, isFinish_queue))  
 
-        hand_result=self.handshake()
-        if hand_result==(True,True):
-            result=True
-        else:
-            result=False
-        return result
-    
-##########################################################################    
-    #Demo1
-    def Robot_Demo1(self):
-        self.reset()
-        time.sleep(1)
-        self.servo()
-        self.keepgo()
-        print('等待初始化')
-        while True:
-            if self.request_system()==False:
-                break
-            if self.request_Initial()==True:
-                print('回到起始位')
-                break
-        catch_list, put_list,count_list = getdata()
+    async def R1(self, orderId, order_list, order_count, isFinish_queue):
         count=1
-        packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        for catch_input, put_input in zip(catch_list, put_list):
-                while True:
-                    if self.request_system()==False:
-                        break
-                    print('catch第%d次'%(count))
-                    case=1
-                    packet[1]=case
-                    packet[-7:]=catch_input
-                    packet[4]=0
-                    result=self.send_data(packet)
-                    if result==True:
-                        break  
-                while True:
-                    if self.request_system()==False:
-                        break
-                    print('put第%d次'%(count))
-                    case=2
-                    packet[1]=case
-                    packet[-7:]=put_input
-                    result=self.send_data(packet)
-                    if result==True:
-                        count+=1
-                        break   
-                if count==count_list+1 or self.request_system()==False:
-                    if self.request_system()==False:
-                        print('系統重置')
-                    else:
-                        case=3
-                        packet[1]=case
-                        home_input=[1, 0, 0, 0, 0, 0, 0]
-                        packet[-7:]=home_input
-                        result=self.send_data(packet)
-                        print('回到原點')
-                    break
-        self.pause()
-        self.reset()
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client_socket.close()
-        print("Connection closed.")  
-
-##########################################################################
-    #Demo2
-    def Robot_Demo2(self, orderId, order_list, order_count, isFinish_queue):
-        global itemstatus
-        global angle
-        global motion_state
-        global robot_state
+        self.thread0.start()
         self.reset()
         time.sleep(1)
         self.start()
-        print('等待初始化')
-        while True:
-            if self.request_system()==False:
+        print('等待機器人啟動')
+
+        while self.Pc_system:
+            if self.Robot_start:
+                print('程式啟動')
                 break
-            if self.request_Initial()==True:
+            await asyncio.sleep(0)
+        while self.Pc_system:
+
+            if self.Robot_initial:
                 print('回到起始位')
                 break
-        catch_list, put_list, count_list = getdata(orderId)
-        count=1
-        packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            await asyncio.sleep(0)
+
+        catch_list, put_list,count_list = getdata(orderId)
+
         for catch_input, put_input in zip(catch_list, put_list):
                 print('等待檢測')
+                # 此行註解到變 demo1
+                await asyncio.create_task(self.Camera_orderchecked())
+
                 # -----------------------
                 websocket_object_count(count)
                 if count == 1:
@@ -484,66 +513,51 @@ class Yaskawa_control():
                 websocket_robot_state('prepare')
                 #------------------------
 
-                while True:
-                    if self.request_system()==False:
-                        break
-                    if itemstatus==1 and self.request_sensor11()==False:
-                        if angle==1:
-                            catch_input[1], catch_input[2] = catch_input[2], catch_input[1]
-                            catch_input[-3:]=[180.0,0.0,90.0]
-                        print('檢測正確')
-                        print(catch_input)
-                        self.send_boxcheck(True)
-                        break
-                while True:
-                    motion_state=1
-                    if self.request_system()==False:
-                        break
+                while self.Pc_start:
+
                     print('catch第%d次'%(count))
-                    
-                    case=1
-                    packet[1]=case
-                    packet[-7:]=catch_input
-                    packet[4]=0
-                    result=self.send_data(packet)
-                    if result==True:
+                    self.Pc_catch=True
+                    self.Pc_put=False
+                    taskmotion=await asyncio.create_task(self.motion(1,catch_input,self.checkangle))
+
+                    if taskmotion:
+                        self.Pc_boxchecked=False
+                        self.removelock=False
                         break  
-                while True:
-                    motion_state=2
-                    if self.request_system()==False:
-                        break
+
+                while self.Pc_system:
+
                     print('put第%d次'%(count))
+                    # ------------------------------
                     websocket_robot_state('operate')
+                    # ------------------------------
+                    self.Pc_catch=False
+                    self.Pc_put=True
+                    taskmotion=await asyncio.create_task(self.motion(2,put_input,self.checkangle))
                     
-                    case=2
-                    packet[1]=case
-                    packet[-7:]=put_input
-                    result=self.send_data(packet)
-                    if result==True:
+                    if taskmotion:
                         count+=1
                         break
-                print('count: ', count)
-                print('count_list: ', count_list)
-                if count==count_list or self.request_system()==False:
-                    if self.request_system()==False:
+
+                if count==count_list or not self.Pc_system:
+                    if not self.Pc_system:
                         print('系統重置')
                         # --------------------
                         isFinish_queue.put(False)
                         # --------------------
                     else:
-                        case=3
-                        packet[1]=case
+                        self.Pc_speed(20)
                         home_input=[1, 0, 0, 0, 0, 0, 0]
-                        packet[-7:]=home_input
-                        result=self.send_data(packet)
+                        self.motion(3,home_input,self.checkangle)
                         print('回到原點')
                         # --------------------
                         isFinish_queue.put(True)
                         # --------------------
                     break
-        self.pause()
-        self.reset()
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client_socket.close()
+
+                await asyncio.sleep(0.1)
+        time.sleep(1)
+        self.Pc_finish=True
         print("Connection closed.")  
-##########################################################################   
+# ########################################################################## 
+

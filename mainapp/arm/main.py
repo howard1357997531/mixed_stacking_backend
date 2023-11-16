@@ -1,111 +1,120 @@
-
 import time
-from .Dimension_2_3D_single import Dimension_2_3D
-from .Dimension_3D_single import Dimension_3D
+from Dimension_2_3D_single import Dimension_2_3D
+from Dimension_3D_single import Dimension_3D
 import cv2
 import numpy as np
 from .camera import intelCamera_copy
-from .yaskawa import Yaskawa_control
+#from camera import azuredkCamera, intelCamera_copy
+# from Yaskawa_function import Yaskawa_control
 from .qrcode import qrClass
 
 
-robot_ip = '192.168.1.15'
-port = 10040
+# robot_ip = '192.168.1.15'
+# port = 10040
 # camera = intelCamera_copy.L515({'SerialNumber':'f1230465'}) 
-camera = intelCamera_copy.L515() 
-camera.openCamera()
+process = True
+try:
+    camera = intelCamera_copy.L515() 
+except:
+     process = False
+     pass
+config =  {
+            "resolution":"1080p",
+            "fps":"15",
+            "depthMode":"WFOV",
+            "algin":"color"
+        }
+        
 
-crop = {'xmin' :350, 'xmax':1410,'ymin':450, 'ymax':790, 'total height':495}
+#camera = azuredkCamera.azureDK(config)
+try:
+	camera.openCamera()
+except :
+    process = False
+        
+    print('No Camera')
+
+crop = {'xmin' :150, 'xmax':1920,'ymin':450, 'ymax':790, 'total height':495}
+
 dimenssion_object = Dimension_2_3D(crop = crop)
 qr_object = qrClass(crop = crop)
 
 dimenssion_3D_object = Dimension_3D(crop = crop)
-robot = Yaskawa_control(server_ip=robot_ip, server_port=port)
+# robot = Yaskawa_control(server_ip=robot_ip, server_port=port)
 
-def cameraCheck():
+def voting_preprocess(dst, src, key):
+
+    dst[src[key]] = dst.get(src[key], 0) + 1
+    return dst
+def voting(result, key_list, data_list):
+            
+    for key in key_list:
+        for src in data_list:
+            result_dict = voting_preprocess(result_dict, src, key)
+            
+    return result
+
+
+def main():
     count = 0
     #out_raw = cv2.VideoWriter(f"recording.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (1920, 1080))
+    if not process:
+        return None
 
     for idx_, i in enumerate(camera.getData()):	
         if not i :
             continue
+        start_ = time.time()
+
         image, pc , depth_image =  i
         image_crop = image[crop['ymin']:crop['ymax'], crop['xmin']:crop['xmax']]    
+        # cv2.imshow('image_crop', image_crop)
+        # cv2.waitKey(1)
+        # if  robot.Robot_sensor1:
+        #     # Box_id=['#0']
+        #     # angle=str(-1)
+        #     # return Box_id,angle
+        #     continue
         
-        if robot.request_sensor11():
-        #if True:
-            # if count < 5:
-            #     count += 1
-            #     continue
+        if True:
+
+
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            image_copy = np.copy(image)
             
-            result_dict = {}
-            # total = 3
-            # Get angle
-            #rectangle_array, pc_rectangle, min_depth, max_depth,angle = dimenssion_object.detect_dmenssion()
-            
-            # Get qr id
-            image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image.copy(), pc)
-            if boxID_list and angle_list:
 
 
-                qr_dict = {'box_id': boxID_list[0], 'angle': angle_list[0]}
-            else:
-                qr_dict = {'box_id': '0', 'angle': '-1'}
+            startdecodetime = time.time()
+            dbrcount = qr_object.decode_dbrcount(image)
+            pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
+            enddecodetime =  time.time()
+            print(dbrcount, pyzbarcount)
+            twodecodetime=enddecodetime -startdecodetime
+            # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
+            # # Calculate frames per second
+            fps2  = 1 / twodecodetime
+            # print( "Estimated  twodecodetime cv2 frames per second : {0}".format(fps2))
 
-            # Classfication
-            # result = dimenssion_object.get_result(image, pc, depth_image)
+            # two detect count equal can show
+            if dbrcount == pyzbarcount:
 
-            # dimenssion_3D_object.set_data(pc, image )
-            # result_3D = dimenssion_3D_object.get_result()
-            # if result is None:
-            #     cv2.imshow('image', image) 
-            #     cv2.waitKey(1)                
-            #     continue
-            
-            # result_dict[qr_dict['box_id']] = result_dict.get(qr_dict['box_id'], 0) + 1
-            # result_dict[result['box_id']] = result_dict.get(result['box_id'], 0) + 1
-            # result_dict[result_3D['box_id']] = result_dict.get(result_3D['box_id'], 0) + 1
-            
-            # angle_dict = {}
-            # angle_dict[qr_dict['angle']] = angle_dict.get(qr_dict['angle'], 0) + 1
-            # angle_dict[result['angle']] = angle_dict.get(result['angle'], 0) + 1
-            # angle_dict[result_3D['angle']] = angle_dict.get(result_3D['angle'], 0) + 1
-            # rectangle = result_3D['rectangle']
+                #
+                #image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image.copy(), pc)
+                image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)
 
-            # if len(set(result_dict.keys() ))== total:
-            #     box_id = result['box_id']
-            #     angle  = result['angle']
-            # else:
+                if boxID_list and angle_list:
+                    qr_dict = {'box_id': boxID_list, 'angle': angle_list}
+                else:
+                    qr_dict = {'box_id': '0', 'angle': '-1'}
 
-            #     # box_id = sorted(result_dict.keys(),reverse = True)[0]
-            #     box_id = sorted(result_dict.items(), key = lambda x:x[1], reverse = True)[0][0]
-            #     # angle = sorted(angle_dict.keys(),reverse = True)[0]
-            #     angle = sorted(angle_dict.items(), key = lambda x:x[1], reverse= True)[0][0]
+                box_id = qr_dict['box_id']
+                angle = qr_dict['angle']
+                cv2.putText(image, f"ID: {box_id}, angle: {angle}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
+                cv2.imshow('image',image)
+                Box_id = ['#' + item for item in box_id]
+                print(Box_id,angle)
 
-            # box_id, angle, rectangle = result['box_id'], result['angle'], result['rectangle']
-            #print('QR:',qr_dict['box_id'])
-            # cv2.putText(image, f"ID: {box_id}, angle: {angle}", tuple(rectangle[0])+ np.asarray([0,0]), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
-            # if boxID_list and angle_list:
-                # cv2.putText(image, f"QR: {boxID_list[0]}, angle: {angle_list[0]}", tuple(rectangle[0]+ np.asarray([0,200])), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
-            # cv2.imshow('image',image)
-            # cv2.waitKey(1)
-            QR_ID=qr_dict['box_id']
-            angle = qr_dict['angle']
-            # BOX_id = '#'+ box_id
-            if QR_ID[-1].isdigit():
-                QR_id='#'+QR_ID
-            else:
-                QR_id='#'+QR_ID[:-1]
-            print(QR_id, angle)
-            return  QR_id,angle    
-    
-            # return box_id, angle, boxID_list
-        else:
-            cv2.imshow('image', image) 
-            cv2.waitKey(1)
-            #return None, None, None
-        #out_raw.write(image)
-   
+                return Box_id,angle
 
-# cameraCheck()    
-     
+# main()

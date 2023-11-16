@@ -20,6 +20,7 @@ class L515:
         self.config = rs.config()
         self.pc = rs.pointcloud()
 
+
         self.pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
         self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
         self.device = self.pipeline_profile.get_device()

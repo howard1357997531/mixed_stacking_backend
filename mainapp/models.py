@@ -76,7 +76,8 @@ class OrderItem(models.Model):
 class MultipleOrder(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
     orderSelectId_str = models.CharField(max_length=255, null=True, blank=True)
-
+    is_today_latest = models.BooleanField(default=True)
+    
     def __str__(self):
         return self.name
     

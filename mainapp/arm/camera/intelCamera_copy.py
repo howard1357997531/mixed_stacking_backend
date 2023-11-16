@@ -61,7 +61,8 @@ class L515:
             self.cameraStatus=True
         except:
             print('open camera error')
-            raise
+
+            #raise
     
     def closeCamera(self):
         try:
@@ -103,4 +104,5 @@ class L515:
                 yield [colorImage,pointCloudData, np.asarray(depthFrame.get_data()).reshape(1080,1920)]
                 # yield [colorImage,pointCloudData, depth_image]
             else:
-                yield []
+                # yield []
+                continue

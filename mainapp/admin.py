@@ -20,7 +20,7 @@ class OrderItemAdmin(admin.ModelAdmin):
 
 @admin.register(MultipleOrder)
 class MultipleOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'orderSelectId_str', 'createdAt')
+    list_display = ('id', 'name', 'orderSelectId_str', 'is_today_latest', 'createdAt')
 
 @admin.register(MultipleOrderItem)
 class MultipleOrderAdmin(admin.ModelAdmin):
