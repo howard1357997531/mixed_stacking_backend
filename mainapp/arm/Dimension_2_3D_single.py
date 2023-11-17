@@ -6,6 +6,13 @@ import time
 from sklearn.linear_model import RANSACRegressor
 import csv
 
+# -------------
+from django.conf import settings
+import os
+
+box_volume_path = os.path.join(settings.MEDIA_ROOT, 'camera', 'box_volume.csv')
+# -------------
+
 MIN_CONTOUR_AREA = 1000
 class Dimension_2_3D():
     def __init__(self, crop = {'xmin' :320, 'xmax':1920,'ymin':50, 'ymax':1080, 'total height':790}, image = None):
@@ -16,7 +23,8 @@ class Dimension_2_3D():
         self.height = crop['total height']
 
 
-        self.boxes = self.load_boxes_from_csv('box_volume.csv')
+        # self.boxes = self.load_boxes_from_csv('box_volume.csv')
+        self.boxes = self.load_boxes_from_csv(box_volume_path)
 
     def extract_white_area(self, rgb_frame):
         # 1. Extract white mask

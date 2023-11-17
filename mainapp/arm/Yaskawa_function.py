@@ -67,6 +67,21 @@ from django.conf import settings
 import os
 # -----------------------
 
+# web
+def web_count(count, order_list, order_count):
+    # -----------------------
+    websocket_object_count(count)
+    if count == 1:
+        websocket_robot_state('detect')
+    else:
+        next_name = order_list[count] if count < order_count else ""
+        websocket_object_name(order_list[count - 1], next_name)
+    websocket_robot_state('prepare')
+    #------------------------
+
+def web_operate():
+    websocket_robot_state('operate')
+
 def getdata(orderId):
     # -----------------------
     orderId = orderId
@@ -164,7 +179,7 @@ class Yaskawa_control():
         self.frontend_finish=False
         ########################前台-上位機########################
 
-    async def send_position(self, data_D):
+    def send_position(self, data_D):
         position_mapping = {'process': '11', 'case': '12', 'userbase': '10', 'X': '04', 'Y': '05', 'Z': '06', 'A': '07', 'B': '08', 'C': '09'}
 
         for position, value in data_D.items():
@@ -174,7 +189,7 @@ class Yaskawa_control():
             data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 {position_mapping[position]} 00 01 02 00 00 " + hex_value.replace(" ", ""))
             self.client_socket3.sendto(data_packet, (self.server_ip, self.server_port))
 
-            await asyncio.sleep(0.01)
+            time.sleep(0.01)
 
     async def send_control(self):
         while not self.Pc_finish:
@@ -219,7 +234,7 @@ class Yaskawa_control():
                 self.Robot_sensor2=bool(int(signal_binary[-10])) 
                 self.Robot_sensor3=bool(int(signal_binary[-11]))
                 I=I+1
-                print(I)
+                # print(I)
                 await asyncio.sleep(0)
             else:
                 print('fail')
@@ -264,7 +279,7 @@ class Yaskawa_control():
 
     #整合視覺#
     ########################   
-    async def main(self):
+    def main(self):
         count = 0
         #out_raw = cv2.VideoWriter(f"recording.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (1920, 1080))
         if not process:
@@ -298,6 +313,7 @@ class Yaskawa_control():
                 dbrcount = qr_object.decode_dbrcount(image)
                 pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
                 enddecodetime =  time.time()
+                # dbrcount 檢測到的全部東西 ex: ['#9', '#7']
                 print(dbrcount, pyzbarcount)
                 twodecodetime=enddecodetime -startdecodetime
                 # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
@@ -322,12 +338,12 @@ class Yaskawa_control():
                     cv2.putText(image, f"ID: {box_id}, angle: {angle}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
                     cv2.imshow('image',image)
                     Box_id = ['#' + item for item in box_id]
-                    print(Box_id,angle)
+                    # print(Box_id,angle)
 
                     return Box_id,angle
-            await asyncio.sleep(0.3)       
+            time.sleep(0.3)       
 
-    async def supplycheck(self):
+    def thread2_supplycheck(self):
         self.frontend_display=4
         # ------------------------------
         websocket_robot_state('detect')
@@ -336,7 +352,7 @@ class Yaskawa_control():
             if self.Robot_sensor3 and not self.removelock and not self.Robot_sensor1:
                 print('開始檢測')
                 self.Pc_checked=True
-                result = await asyncio.create_task(self.main())
+                result = self.main()
                 # result = self.main()
                 if result[0][0] != '#0'or result[1] != '-1':                
                     while self.Pc_system:
@@ -346,12 +362,13 @@ class Yaskawa_control():
                         for item in self.name_checked:
                             if item in Box_ID:
                                 Box_ID.remove(item)
-                                await asyncio.sleep(0)
+                                time.sleep(0.01)
                         for item in self.angle_checked:
                             if item in Box_angle:
                                 Box_angle.remove(item)
-                                await asyncio.sleep(0)
-
+                                time.sleep(0.01)
+                        # 偵測正確就會移除對的
+                        print(self.name_list)
                         if len(Box_ID)!=0:
                             if self.name_list[0] == Box_ID[0]:
                                 self.name_checked.append(self.name_list.pop(0))
@@ -367,7 +384,7 @@ class Yaskawa_control():
                                 #錯誤
                                 self.frontend_display=2
                                 # self.name_wrong.appendmoc(Box_ID[0])
-                                print('Box false:',result[0])
+                                print('Box false:',Box_ID[0])
                                 # ------------------------------
                                 websocket_robot_state('error')          
                                 # ------------------------------
@@ -375,14 +392,14 @@ class Yaskawa_control():
                         
                         else:
                             break
-                        await asyncio.sleep(0.5)
+                        time.sleep(0.5)
                         self.frontend_display=3
                 self.Pc_checked=False
-            await asyncio.sleep(0.5)  
+            time.sleep(0.5)
         self.frontend_display=0
 
-    def thread2_supplycheck(self):
-        asyncio.run(self.supplycheck())
+    # def thread2_supplycheck(self):
+    #     asyncio.run(self.supplycheck())
 
     def Pc_speed(self,D_data):
         D_data=D_data*50
@@ -400,31 +417,34 @@ class Yaskawa_control():
         self.frontend_put=self.Pc_put
         self.frontend_finish=self.Pc_finish      
     #流程檢查
-    async def process_track(self):
+    def process_track(self):
         status=False
         self.Pc_send=True
 
         while self.Pc_system:
+            time.sleep(0.1)
             if self.Robot_received:
                 print('send command recieved')
             
                 while self.Pc_system:
+                    time.sleep(0.1)
                     if self.Robot_motion:
                         self.Pc_send=False
                         print('Robot recieve then in action')
 
                         while self.Pc_system:
+                            time.sleep(0.1)
                             if not self.Robot_motion:
                                 print('Robot action finish')
                                 break
-                            await asyncio.sleep(0.01)
+                            
                         print('send_packet next time')
                         status=True
                         return status
-                    await asyncio.sleep(0.01)
-            await asyncio.sleep(0.01)
+                   
+            
 
-    async def motion(self,case,position,checkangle):
+    def motion(self,case,position,checkangle):
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         packet[1]=case
         packet[-7:]=position
@@ -439,13 +459,13 @@ class Yaskawa_control():
         packet_dict={'process':packet[0],'case':packet[1],'userbase':packet[2],'X':packet[3],
                      'Y':packet[4],'Z':packet[5],'A':packet[6],'B':packet[7],'C':packet[8]}
          
-        await asyncio.create_task(self.send_position(packet_dict))
+        self.send_position(packet_dict)
 
-        result = await asyncio.create_task(self.process_track())
+        result = self.process_track()
 
         return result
     
-    async def Camera_orderchecked(self):
+    def Camera_orderchecked(self):
 
         while self.Pc_system:
 
@@ -460,10 +480,11 @@ class Yaskawa_control():
                 self.angle_checked.pop(0)
                 break
                 
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
 
     #Demo2    
     def Robot_Demo2(self, orderId, order_list, order_count, isFinish_queue):
+        print('供單id: ', orderId)
         # --------------------------------
         box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
         # --------------------------------
@@ -471,12 +492,11 @@ class Yaskawa_control():
         Supply_namecolumns = Supply['matched_box_name']
         name_list1=[]
         for name in Supply_namecolumns:
-            name_list1.append(name)
+            name_list1.append(name.replace('外箱', '').replace('A', ''))
         self.name_list=name_list1[:]
 
-        asyncio.run(self.R1(orderId, order_list, order_count, isFinish_queue))  
-
-    async def R1(self, orderId, order_list, order_count, isFinish_queue):
+        # asyncio.run(self.R1(orderId, order_list, order_count, isFinish_queue))  
+    # async def R1(self, orderId, order_list, order_count, isFinish_queue):
         count=1
         self.thread0.start()
         self.reset()
@@ -488,37 +508,31 @@ class Yaskawa_control():
             if self.Robot_start:
                 print('程式啟動')
                 break
-            await asyncio.sleep(0)
+            time.sleep(0.1)
         while self.Pc_system:
 
             if self.Robot_initial:
                 print('回到起始位')
                 break
-            await asyncio.sleep(0)
+            time.sleep(0.1)
 
         catch_list, put_list,count_list = getdata(orderId)
 
         for catch_input, put_input in zip(catch_list, put_list):
                 print('等待檢測')
                 # 此行註解到變 demo1
-                await asyncio.create_task(self.Camera_orderchecked())
+                self.Camera_orderchecked()
 
-                # -----------------------
-                websocket_object_count(count)
-                if count == 1:
-                    websocket_robot_state('detect')
-                else:
-                    next_name = order_list[count] if count < order_count else ""
-                    websocket_object_name(order_list[count - 1], next_name)
-                websocket_robot_state('prepare')
-                #------------------------
-
-                while self.Pc_start:
+                # ------------------------------
+                web_count(count, order_list, order_count)
+                # ------------------------------
+                
+                while self.Pc_system:
 
                     print('catch第%d次'%(count))
                     self.Pc_catch=True
                     self.Pc_put=False
-                    taskmotion=await asyncio.create_task(self.motion(1,catch_input,self.checkangle))
+                    taskmotion=self.motion(1,catch_input,self.checkangle)
 
                     if taskmotion:
                         self.Pc_boxchecked=False
@@ -529,11 +543,11 @@ class Yaskawa_control():
 
                     print('put第%d次'%(count))
                     # ------------------------------
-                    websocket_robot_state('operate')
+                    web_operate()
                     # ------------------------------
                     self.Pc_catch=False
                     self.Pc_put=True
-                    taskmotion=await asyncio.create_task(self.motion(2,put_input,self.checkangle))
+                    taskmotion=self.motion(2,put_input,self.checkangle)
                     
                     if taskmotion:
                         count+=1
@@ -554,10 +568,10 @@ class Yaskawa_control():
                         isFinish_queue.put(True)
                         # --------------------
                     break
-
-                await asyncio.sleep(0.1)
-        time.sleep(1)
+                time.sleep(0.1)
+        time.sleep(0.5)
         self.Pc_finish=True
+        self.Pc_system=False
         print("Connection closed.")  
 # ########################################################################## 
 

@@ -234,8 +234,51 @@ def aiCalculate(request):
 # from .arm.Yaskawa_function import Yaskawa_control
 import threading
 from queue import Queue
+import random
 
 RESET = False
+
+class Robot_test():
+    def __init__(self, order_count, order_list, isFinish_queue):
+        self.order_count = order_count
+        self.order_list = order_list
+        self.isFinish_queue = isFinish_queue
+        self.count = 1
+        self.supply = True
+        self.camera_detect = True
+
+    def supply_check(self):
+        while self.supply:
+            if self.camera_detect:
+                random_qty = random.randint(0, 3)
+                detect = self.order_list[self.count - 1: self.count + random_qty]
+                print('count: ', self.count)
+                print('detect: ',detect)
+                time.sleep(2)
+            
+    def robot(self):
+        time.sleep(2)
+        for count in range(1, self.order_count + 1):
+            websocket_object_count(count)
+            websocket_robot_state('prepare')
+            print('robot prepare')
+            if count != 1:
+                next_name = self.order_list[count] if count < self.order_count else ""
+                websocket_object_name(self.order_list[count - 1], next_name)
+            time.sleep(6)
+            self.camera_detect = False
+            if self.count < self.order_count:
+                self.count += 1
+            time.sleep(1)
+            self.camera_detect = True
+            print('camera_detect:', self.camera_detect)
+            time.sleep(1)
+            websocket_robot_state('operate')
+            print('robot operate')
+            time.sleep(3)
+        
+        self.supply = False
+        self.isFinish_queue.put(False)
 
 def robot_test(order_count, order_list, isFinish_queue):
     time.sleep(2)
@@ -268,6 +311,7 @@ def robot_test(order_count, order_list, isFinish_queue):
         #     break
     isFinish_queue.put(True)
     websocket_robot_state('finish')
+# robot = Yaskawa_control('192.168.1.15', 10040)
 
 @api_view(['POST'])
 def executeRobot(request):
@@ -280,19 +324,24 @@ def executeRobot(request):
         isFinish_queue = Queue()
 
         '''
-        robot = Yaskawa_control('192.168.1.15', 10040)
+        
         thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         thread1.start()
         time.sleep(2)
-        thread2 = threading.Thread(target=robot.supplycheck)
+        thread2 = threading.Thread(target=robot.thread2_supplycheck)
         thread2.start()
 
         thread1.join(); thread2.join()
         '''
         # test
-        thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
+        robot = Robot_test(order_count, order_list, isFinish_queue)
+        # thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
+        thread1 = threading.Thread(target=robot.robot)
+        thread2 = threading.Thread(target=robot.supply_check)
         thread1.start()
-        thread1.join()
+        time.sleep(2)
+        thread2.start()
+        thread1.join(); thread2.join()
         RESET = False
         # '''
         robot_state = "finish" if isFinish_queue.get() else "reset"
@@ -308,7 +357,6 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         '''
-        robot = Yaskawa_control('192.168.1.15', 10040)
         if mode == 'pause':
             robot.pause()
         elif mode == 'unPause':
@@ -318,9 +366,8 @@ def robotSetting(request):
             robot_speed = 100 if robot_speed > 100 else robot_speed
             speed(robot_speed)
         elif mode == 'reset':
-            robot.pause()
             robot.reset()
-        '''
+        # '''
         # test
         global RESET
         if mode == 'pause':
