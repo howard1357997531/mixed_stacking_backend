@@ -56,6 +56,16 @@ def websocket_object_name(name, nextName):
         }
     )
 
+def websocket_visual_result(visual_result, count):
+    return async_to_sync(channel_layer.group_send)(
+        'count_room',
+        {
+            'type': 'visual_result_change',
+            'visual_result': visual_result,
+            'visual_count': count
+        }
+    )
+
 
 @api_view(['POST'])
 def controlRobot(request):
@@ -235,47 +245,92 @@ def aiCalculate(request):
 import threading
 from queue import Queue
 import random
+import copy
 
 RESET = False
 
 class Robot_test():
     def __init__(self, order_count, order_list, isFinish_queue):
+        self.time_count = 1
         self.order_count = order_count
         self.order_list = order_list
         self.isFinish_queue = isFinish_queue
-        self.count = 1
         self.supply = True
         self.camera_detect = True
+        self.count = 1
+        self.detect_count = 1
+        self.has_error_detect_list = []
 
     def supply_check(self):
         while self.supply:
             if self.camera_detect:
-                random_qty = random.randint(0, 3)
-                detect = self.order_list[self.count - 1: self.count + random_qty]
-                print('count: ', self.count)
-                print('detect: ',detect)
-                time.sleep(2)
+                websocket_robot_state('detect')
+                # 一開始先給隨機偵測數量，後面給的數量不會低於前面數量
+                self.detect_count = random.randint(self.detect_count, 4)
+                detect_list = self.order_list[self.count - 1: self.count - 1 + self.detect_count]
+                error_count = random.randint(0, len(detect_list) - 1)
+                # 第一個固定對錯，後面隨機給對錯
+                error_index = list(range(1, len(detect_list)))
+                error_list_index = random.sample(error_index, error_count)
+                print(f'第{self.count}次')
+                print('detect_list: ', detect_list)
+                print('first has_error_detect_list: ', self.has_error_detect_list)
+                print('error_count: ', error_count)
+                print('error_list_index: ', error_list_index)
+
+                self.has_error_detect_list = copy.deepcopy(detect_list)  
+                print('copy has_error_detect_list: ', self.has_error_detect_list)
+
+                # 第一個固定偵測對錯(基數全對，偶數三秒鐘後變對)
+                print('time_count: ', self.time_count)
+                if self.count % 2 == 0:
+                    if self.time_count <= 4:
+                        self.has_error_detect_list[0] = 'error'
+                        websocket_robot_state('error')
+                    else:
+                        self.has_error_detect_list[0] = detect_list[0]
+                        websocket_robot_state('correct')
+                else: 
+                    websocket_robot_state('correct')
+
+                if len(error_list_index) != 0:
+                    for index in error_list_index:
+                        self.has_error_detect_list[index] = 'error' 
+                print('final has_error_detect_list:', self.has_error_detect_list)
+                websocket_visual_result(self.has_error_detect_list, None)
+
+                time.sleep(1)
+                self.time_count += 1
+                time.sleep(1)
             
     def robot(self):
         time.sleep(2)
         for count in range(1, self.order_count + 1):
             websocket_object_count(count)
             websocket_robot_state('prepare')
-            print('robot prepare')
+            print(f'準備操作第{count}個物件')
             if count != 1:
                 next_name = self.order_list[count] if count < self.order_count else ""
                 websocket_object_name(self.order_list[count - 1], next_name)
-            time.sleep(6)
-            self.camera_detect = False
-            if self.count < self.order_count:
-                self.count += 1
-            time.sleep(1)
-            self.camera_detect = True
-            print('camera_detect:', self.camera_detect)
-            time.sleep(1)
-            websocket_robot_state('operate')
-            print('robot operate')
-            time.sleep(3)
+            while True:
+                if self.time_count == 6:
+                    # 手臂向下夾取物件時會停止拍照，直到升到某個相機照不到的高度才會繼續拍照
+                    self.camera_detect = False
+                    print('停止偵測')
+                    if self.count < self.order_count:
+                        self.count += 1
+                        websocket_visual_result(None, self.count)
+                    self.detect_count = 1
+                    self.has_error_detect_list = []
+                    self.time_count = 1
+                    time.sleep(1)
+                    self.camera_detect = True
+                    print('開始偵測')
+                    time.sleep(1)
+                    websocket_robot_state('operate')
+                    print('手臂操作中\n')
+                    time.sleep(4)
+                    break
         
         self.supply = False
         self.isFinish_queue.put(False)
@@ -339,7 +394,7 @@ def executeRobot(request):
         thread1 = threading.Thread(target=robot.robot)
         thread2 = threading.Thread(target=robot.supply_check)
         thread1.start()
-        time.sleep(2)
+        time.sleep(2.1)
         thread2.start()
         thread1.join(); thread2.join()
         RESET = False
