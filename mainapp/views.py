@@ -174,20 +174,43 @@ def createWorkOrder(request):
         [11, "#35外箱", 102, 46, 18, data.get("35")],
     ]
 
-    workOrder.objects.create(
-        name = data.get("name"),
-        _16A_qty = data.get("16A"),
-        _18A_qty = data.get("18A"),
-        _33_qty = data.get("33"),
-        _7A_qty = data.get("7A"),
-        _13_qty = data.get("13"),
-        _22_qty = data.get("22"),
-        _20_qty = data.get("20"),
-        _29_qty = data.get("29"),
-        _9_qty = data.get("9"),
-        _26_qty = data.get("26"),
-        _35_qty = data.get("35"),
-    )
+    # 先取得 order 唯一碼 再創建csv 然後建立order
+    unique_code = uuid.uuid4().hex
+    unique_code_exist = Order.objects.filter(unique_code=unique_code)
+
+    while unique_code_exist:
+        unique_code = uuid.uuid4().hex
+        unique_code_exist = Order.objects.filter(unique_code=unique_code)
+        if unique_code_exist is None:
+            break
+
+    csv_file = os.path.join(settings.MEDIA_ROOT, 'csv_file_step2', f'{unique_code}.csv')
+    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+    
+        for row in csv_data:
+            writer.writerow(row)
+
+    order = Order.objects.create(
+                name=data.get("name"),
+                unique_code=unique_code,
+                csv_file=csv_file)
+    order.save()
+
+    # workOrder.objects.create(
+    #     name = data.get("name"),
+    #     _16A_qty = data.get("16A"),
+    #     _18A_qty = data.get("18A"),
+    #     _33_qty = data.get("33"),
+    #     _7A_qty = data.get("7A"),
+    #     _13_qty = data.get("13"),
+    #     _22_qty = data.get("22"),
+    #     _20_qty = data.get("20"),
+    #     _29_qty = data.get("29"),
+    #     _9_qty = data.get("9"),
+    #     _26_qty = data.get("26"),
+    #     _35_qty = data.get("35"),
+    # )
 
     max_id = workOrder.objects.aggregate(Max('id')).get('id__max')
     order = workOrder.objects.filter(id=max_id).first()
@@ -200,14 +223,6 @@ def createWorkOrder(request):
     
         for row in csv_data:
             writer.writerow(row)
-
-    # 亂數
-    # items = []
-    # for key, value in data.items():
-    #     items.extend([key] * value)
-    # random.shuffle(items)
-    # print("original data:", data)
-    # print("random data:", items)
     return Response({'ok'})
 
 @api_view(['GET'])
