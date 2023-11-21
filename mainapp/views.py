@@ -21,6 +21,7 @@ import time
 import uuid
 import csv
 import os
+import io
 
 from channels.layers import get_channel_layer
 from web_socket.consumers import RobotControlConsumers
@@ -161,68 +162,56 @@ def createWorkOrder(request):
     
     csv_data = [
         ["box_id", "name", "width", "height", "depth", "quantity"],
-        [1, "#7A外箱", 35, 26, 20, data.get("7A")],
-        [2, "#9外箱", 43, 32, 23, data.get("9")],
-        [3, "#16A外箱", 35, 26, 16, data.get("16A")],
-        [4, "#18A外箱", 35, 26, 18, data.get("18A")],
-        [5, "#13外箱", 56, 25, 14, data.get("13")],
-        [6, "#20外箱", 53, 34, 13, data.get("20")],
-        [7, "#22外箱", 45, 26, 18, data.get("22")],
-        [8, "#26外箱", 72, 25, 20, data.get("26")],
-        [9, "#29外箱", 65, 25, 18, data.get("29")],
-        [10, "#33外箱", 44, 21, 18, data.get("33")],
-        [11, "#35外箱", 102, 46, 18, data.get("35")],
+        [1, "#7A", 35, 26, 20, data.get("7A")],
+        [2, "#9", 43, 32, 23, data.get("9")],
+        [3, "#16A", 35, 26, 16, data.get("16A")],
+        [4, "#18A", 35, 26, 18, data.get("18A")],
+        [5, "#13", 56, 25, 14, data.get("13")],
+        [6, "#20", 53, 34, 13, data.get("20")],
+        [7, "#22", 45, 26, 18, data.get("22")],
+        [8, "#26", 72, 25, 20, data.get("26")],
+        [9, "#29", 65, 25, 18, data.get("29")],
+        [10, "#33", 44, 21, 18, data.get("33")],
+        [11, "#35", 102, 46, 18, data.get("35")],
     ]
 
-    # 先取得 order 唯一碼 再創建csv 然後建立order
     unique_code = uuid.uuid4().hex
     unique_code_exist = Order.objects.filter(unique_code=unique_code)
-
     while unique_code_exist:
         unique_code = uuid.uuid4().hex
         unique_code_exist = Order.objects.filter(unique_code=unique_code)
         if unique_code_exist is None:
             break
-
-    csv_file = os.path.join(settings.MEDIA_ROOT, 'csv_file_step2', f'{unique_code}.csv')
-    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
     
-        for row in csv_data:
-            writer.writerow(row)
+    today = datetime.datetime.now()
+    today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month,
+            createdAt__day=today.day)
+    if today_order.exists():
+        today_order.update(is_today_latest=False)
+
+    csv_file_content = io.StringIO()
+    csv_writer = csv.writer(csv_file_content, lineterminator='\n')
+    for row in csv_data:
+        csv_writer.writerow(row)
 
     order = Order.objects.create(
                 name=data.get("name"),
-                unique_code=unique_code,
-                csv_file=csv_file)
-    order.save()
-
-    # workOrder.objects.create(
-    #     name = data.get("name"),
-    #     _16A_qty = data.get("16A"),
-    #     _18A_qty = data.get("18A"),
-    #     _33_qty = data.get("33"),
-    #     _7A_qty = data.get("7A"),
-    #     _13_qty = data.get("13"),
-    #     _22_qty = data.get("22"),
-    #     _20_qty = data.get("20"),
-    #     _29_qty = data.get("29"),
-    #     _9_qty = data.get("9"),
-    #     _26_qty = data.get("26"),
-    #     _35_qty = data.get("35"),
-    # )
-
-    max_id = workOrder.objects.aggregate(Max('id')).get('id__max')
-    order = workOrder.objects.filter(id=max_id).first()
-    order.file_name =  f'box_data_{max_id}.csv'
-    order.save()
-
-    csv_file = os.path.join(settings.MEDIA_ROOT, f'box_data_{max_id}.csv')
-    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
+                unique_code=unique_code)
     
-        for row in csv_data:
-            writer.writerow(row)
+    order.csv_file.save(f'{unique_code}.csv', ContentFile(csv_file_content.getvalue()))
+    csv_file_content.close()
+
+    for i, data in enumerate(csv_data, start=1):
+        if i == 1:
+            continue
+        OrderItem.objects.create(
+            order = order,
+            name = data[1].replace('外箱', ''),
+            width = data[2],
+            height = data[3],
+            depth = data[4],
+            quantity = int(data[5])
+        )
     return Response({'ok'})
 
 @api_view(['GET'])
@@ -256,7 +245,6 @@ def aiCalculate(request):
     # return Response({"worklist_id": worklist_id,  "training_time": training_time})
 
 # ---------------------
-# from .arm.Yaskawa_function import Yaskawa_control
 import threading
 from queue import Queue
 import random
@@ -267,19 +255,18 @@ RESET = False
 class Robot_test():
     def __init__(self, order_count, order_list, isFinish_queue):
         self.time_count = 1
+        self.supply = True
+        self.camera_detect = True
         self.order_count = order_count
         self.order_list = order_list
         self.isFinish_queue = isFinish_queue
-        self.supply = True
-        self.camera_detect = True
         self.count = 1
-        self.detect_count = 1
+        self.detect_count = 1   # 視覺偵測記數
         self.has_error_detect_list = []
 
     def supply_check(self):
         while self.supply:
             if self.camera_detect:
-                websocket_robot_state('detect')
                 # 一開始先給隨機偵測數量，後面給的數量不會低於前面數量
                 self.detect_count = random.randint(self.detect_count, 4)
                 detect_list = self.order_list[self.count - 1: self.count - 1 + self.detect_count]
@@ -287,17 +274,17 @@ class Robot_test():
                 # 第一個固定對錯，後面隨機給對錯
                 error_index = list(range(1, len(detect_list)))
                 error_list_index = random.sample(error_index, error_count)
-                print(f'第{self.count}次')
-                print('detect_list: ', detect_list)
-                print('first has_error_detect_list: ', self.has_error_detect_list)
-                print('error_count: ', error_count)
-                print('error_list_index: ', error_list_index)
+                # print(f'第{self.count}次')
+                # print('detect_list: ', detect_list)
+                # print('first has_error_detect_list: ', self.has_error_detect_list)
+                # print('error_count: ', error_count)
+                # print('error_list_index: ', error_list_index)
 
                 self.has_error_detect_list = copy.deepcopy(detect_list)  
-                print('copy has_error_detect_list: ', self.has_error_detect_list)
+                # print('copy has_error_detect_list: ', self.has_error_detect_list)
 
                 # 第一個固定偵測對錯(基數全對，偶數三秒鐘後變對)
-                print('time_count: ', self.time_count)
+                # print('time_count: ', self.time_count)
                 if self.count % 2 == 0:
                     if self.time_count <= 4:
                         self.has_error_detect_list[0] = 'error'
@@ -311,7 +298,7 @@ class Robot_test():
                 if len(error_list_index) != 0:
                     for index in error_list_index:
                         self.has_error_detect_list[index] = 'error' 
-                print('final has_error_detect_list:', self.has_error_detect_list)
+                # print('final has_error_detect_list:', self.has_error_detect_list)
                 websocket_visual_result(self.has_error_detect_list, None)
 
                 time.sleep(1)
@@ -319,14 +306,12 @@ class Robot_test():
                 time.sleep(1)
             
     def robot(self):
-        time.sleep(2)
-        for count in range(1, self.order_count + 1):
-            websocket_object_count(count)
+        time.sleep(3)
+        for i in range(1, self.order_count + 1):
+            websocket_object_count(i)
             websocket_robot_state('prepare')
-            print(f'準備操作第{count}個物件')
-            if count != 1:
-                next_name = self.order_list[count] if count < self.order_count else ""
-                websocket_object_name(self.order_list[count - 1], next_name)
+            print(f'準備操作第{i}個物件')
+            
             while True:
                 if self.time_count == 6:
                     # 手臂向下夾取物件時會停止拍照，直到升到某個相機照不到的高度才會繼續拍照
@@ -335,6 +320,10 @@ class Robot_test():
                     if self.count < self.order_count:
                         self.count += 1
                         websocket_visual_result(None, self.count)
+
+                    next_name = self.order_list[self.count] if self.count < self.order_count else ""
+                    websocket_object_name(self.order_list[self.count - 1], next_name)
+                    
                     self.detect_count = 1
                     self.has_error_detect_list = []
                     self.time_count = 1
@@ -381,24 +370,31 @@ def robot_test(order_count, order_list, isFinish_queue):
         #     break
     isFinish_queue.put(True)
     websocket_robot_state('finish')
-# robot = Yaskawa_control('192.168.1.15', 10040)
+
+# from .arm.Yaskawa_function import Yaskawa_control
+ROBOT = None
 
 @api_view(['POST'])
 def executeRobot(request):
-    global RESET
+    global ROBOT
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
         order_list = order.aiTraining_order.split(',')
         order_count = len(order_list)
         isFinish_queue = Queue()
-
-        '''
         
-        thread1 = threading.Thread(target=robot.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        '''
+        ROBOT = Yaskawa_control('192.168.1.15', 10040)
+        # demo1
+        # thread1 = threading.Thread(target=ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1.start()
+        # thread1.join()
+        # demo2
+        thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         thread1.start()
         time.sleep(2)
-        thread2 = threading.Thread(target=robot.thread2_supplycheck)
+        thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
         thread2.start()
 
         thread1.join(); thread2.join()
@@ -409,7 +405,7 @@ def executeRobot(request):
         thread1 = threading.Thread(target=robot.robot)
         thread2 = threading.Thread(target=robot.supply_check)
         thread1.start()
-        time.sleep(2.1)
+        time.sleep(3.1)
         thread2.start()
         thread1.join(); thread2.join()
         RESET = False
@@ -428,16 +424,16 @@ def robotSetting(request):
         mode = data.get('mode')
         '''
         if mode == 'pause':
-            robot.pause()
+            ROBOT.pause()
         elif mode == 'unPause':
-            robot.keepgo()
+            ROBOT.keepgo()
         elif mode == 'speedUp' or mode == 'speedDown':
             robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
             robot_speed = 100 if robot_speed > 100 else robot_speed
             speed(robot_speed)
         elif mode == 'reset':
-            robot.reset()
-        # '''
+            ROBOT.reset()
+        '''
         # test
         global RESET
         if mode == 'pause':

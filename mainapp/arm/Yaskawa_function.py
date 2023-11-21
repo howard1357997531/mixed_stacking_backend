@@ -13,7 +13,8 @@ import threading
 
 # ------------------------------
 # web_socket
-from mainapp.views import websocket_robot_state, websocket_object_count, websocket_object_name
+from mainapp.views import (websocket_robot_state, websocket_object_count, 
+    websocket_object_name, websocket_visual_result)
 # ------------------------------
 
 process = True
@@ -66,21 +67,6 @@ def decimal_to_hex1(decimal):
 from django.conf import settings
 import os
 # -----------------------
-
-# web
-def web_count(count, order_list, order_count):
-    # -----------------------
-    websocket_object_count(count)
-    if count == 1:
-        websocket_robot_state('detect')
-    else:
-        next_name = order_list[count] if count < order_count else ""
-        websocket_object_name(order_list[count - 1], next_name)
-    websocket_robot_state('prepare')
-    #------------------------
-
-def web_operate():
-    websocket_robot_state('operate')
 
 def getdata(orderId):
     # -----------------------
@@ -298,23 +284,23 @@ class Yaskawa_control():
                 Box_id=['#0']
                 angle=str(-1)
                 return Box_id,angle
-              
-            
-            if True:
-
-
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-                image_copy = np.copy(image)
                 
-
-
+            if True:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                image_copy = np.copy(image)
                 startdecodetime = time.time()
                 dbrcount = qr_object.decode_dbrcount(image)
                 pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
                 enddecodetime =  time.time()
                 # dbrcount 檢測到的全部東西 ex: ['#9', '#7']
-                print(dbrcount, pyzbarcount)
+                # print(dbrcount, pyzbarcount)
+                print('dbrcount: ', dbrcount)
+                print('pyzbarcount: ', pyzbarcount)
+                # --------------------------------
+                # if dbrcount in [0, -1]:
+                #     websocket_robot_state('detect')
+                websocket_visual_result(dbrcount, None)
+                # --------------------------------
                 twodecodetime=enddecodetime -startdecodetime
                 # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
                 # # Calculate frames per second
@@ -345,9 +331,6 @@ class Yaskawa_control():
 
     def thread2_supplycheck(self):
         self.frontend_display=4
-        # ------------------------------
-        websocket_robot_state('detect')
-        # ------------------------------
         while self.Pc_system:  
             if self.Robot_sensor3 and not self.removelock and not self.Robot_sensor1:
                 print('開始檢測')
@@ -442,8 +425,6 @@ class Yaskawa_control():
                         status=True
                         return status
                    
-            
-
     def motion(self,case,position,checkangle):
         packet = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         packet[1]=case
@@ -470,8 +451,8 @@ class Yaskawa_control():
         while self.Pc_system:
 
             if not self.Pc_checked  and not len(self.name_checked)==0 and self.Robot_sensor1:
+                # 這邊開始關閉偵測
                 self.removelock=True
-                self.Pc_boxchecked=True
 
                 self.checkangle = 1 if self.angle_checked[0]== 1 else 0
             
@@ -482,9 +463,103 @@ class Yaskawa_control():
                 
             time.sleep(0.1)
 
+    #Demo1  
+    def Robot_Demo1(self, orderId, order_list, order_count, isFinish_queue):
+        # --------------------------------
+        box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
+        # --------------------------------
+        Supply = pd.read_csv(box_positions_conveyor_path)
+        Supply_namecolumns = Supply['matched_box_name']
+        name_list1=[]
+        for name in Supply_namecolumns:
+            name_list1.append(name.replace('外箱', '').replace('A', ''))
+        self.name_list=name_list1[:]
+
+        # asyncio.run(self.R1(orderId, order_list, order_count, isFinish_queue))  
+    # async def R1(self, orderId, order_list, order_count, isFinish_queue):
+        count=1
+        self.thread0.start()
+        self.reset()
+        time.sleep(1)
+        self.start()
+        print('等待機器人啟動')
+
+        while self.Pc_system:
+            if self.Robot_start:
+                print('程式啟動')
+                break
+            time.sleep(0.1)
+        while self.Pc_system:
+
+            if self.Robot_initial:
+                print('回到起始位')
+                break
+            time.sleep(0.1)
+
+        catch_list, put_list,count_list = getdata(orderId)
+
+        for catch_input, put_input in zip(catch_list, put_list):
+                print('等待檢測')
+                # 此行註解到變 demo1
+                # self.Camera_orderchecked()
+
+                # -----------------------
+                websocket_object_count(count)
+                next_name = order_list[count] if count < order_count else ""
+                websocket_object_name(order_list[count - 1], next_name)
+                #------------------------
+                
+                while self.Pc_system:
+                    self.Pc_boxchecked=True
+                    print('catch第%d次'%(count))
+                    # -----------------------
+                    websocket_robot_state('prepare')
+                    # -----------------------
+                    self.Pc_catch=True
+                    self.Pc_put=False
+                    taskmotion=self.motion(1,catch_input,self.checkangle)
+                
+                    if taskmotion:
+                        self.Pc_boxchecked=False
+                        self.removelock=False
+                        break  
+
+                while self.Pc_system:
+                    print('put第%d次'%(count))
+                    # -----------------------
+                    websocket_robot_state('operate')
+                    # -----------------------
+                    self.Pc_catch=False
+                    self.Pc_put=True
+                    taskmotion=self.motion(2,put_input,self.checkangle)
+                    
+                    if taskmotion:
+                        count+=1
+                        break
+
+                if count==count_list or not self.Pc_system:
+                    if not self.Pc_system:
+                        print('系統重置')
+                        # --------------------
+                        isFinish_queue.put(False)
+                        # --------------------
+                    else:
+                        self.Pc_speed(20)
+                        home_input=[1, 0, 0, 0, 0, 0, 0]
+                        self.motion(3,home_input,self.checkangle)
+                        print('回到原點')
+                        # --------------------
+                        isFinish_queue.put(True)
+                        # --------------------
+                    break
+                time.sleep(0.1)
+        time.sleep(0.5)
+        self.Pc_finish=True
+        self.Pc_system=False
+        print("Connection closed.")
+
     #Demo2    
     def Robot_Demo2(self, orderId, order_list, order_count, isFinish_queue):
-        print('供單id: ', orderId)
         # --------------------------------
         box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{orderId}', 'box_positions_conveyor.csv')
         # --------------------------------
@@ -523,12 +598,13 @@ class Yaskawa_control():
                 # 此行註解到變 demo1
                 self.Camera_orderchecked()
 
-                # ------------------------------
-                web_count(count, order_list, order_count)
-                # ------------------------------
+                # -----------------------
+                websocket_object_count(count)
+                websocket_robot_state('prepare')               
+                #------------------------
                 
                 while self.Pc_system:
-
+                    self.Pc_boxchecked=True
                     print('catch第%d次'%(count))
                     self.Pc_catch=True
                     self.Pc_put=False
@@ -536,6 +612,13 @@ class Yaskawa_control():
 
                     if taskmotion:
                         self.Pc_boxchecked=False
+                        # -----------------------
+                        if count < order_count:
+                            websocket_visual_result(None, count + 1)
+                            next_name = order_list[count + 1] if count < order_count - 1 else ''
+                            websocket_object_name(order_list[count], next_name)
+                        # -----------------------
+                        # 解鎖開始偵測
                         self.removelock=False
                         break  
 
@@ -543,7 +626,7 @@ class Yaskawa_control():
 
                     print('put第%d次'%(count))
                     # ------------------------------
-                    web_operate()
+                    websocket_robot_state('operate')
                     # ------------------------------
                     self.Pc_catch=False
                     self.Pc_put=True
@@ -572,6 +655,7 @@ class Yaskawa_control():
         time.sleep(0.5)
         self.Pc_finish=True
         self.Pc_system=False
+        self.thread0.join()
         print("Connection closed.")  
 # ########################################################################## 
 
