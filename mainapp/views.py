@@ -319,7 +319,6 @@ class Robot_test():
                     print('停止偵測')
                     if self.count < self.order_count:
                         self.count += 1
-                        websocket_visual_result(None, self.count)
 
                     next_name = self.order_list[self.count] if self.count < self.order_count else ""
                     websocket_object_name(self.order_list[self.count - 1], next_name)
@@ -329,6 +328,10 @@ class Robot_test():
                     self.time_count = 1
                     time.sleep(1)
                     self.camera_detect = True
+                    # 開始偵測之後再發下一個count，不然前台的detect result 還是上一個的
+                    # 因為停止偵測之後就不再更新
+                    time.sleep(0.00)
+                    websocket_visual_result(None, self.count)
                     print('開始偵測')
                     time.sleep(1)
                     websocket_robot_state('operate')
@@ -337,7 +340,7 @@ class Robot_test():
                     break
         
         self.supply = False
-        self.isFinish_queue.put(False)
+        self.isFinish_queue.put(True)
 
 def robot_test(order_count, order_list, isFinish_queue):
     time.sleep(2)
@@ -391,13 +394,13 @@ def executeRobot(request):
         # thread1.start()
         # thread1.join()
         # demo2
-        thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
-        thread1.start()
-        time.sleep(2)
-        thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
-        thread2.start()
+        # thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1.start()
+        # time.sleep(2)
+        # thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
+        # thread2.start()
 
-        thread1.join(); thread2.join()
+        # thread1.join(); thread2.join()
         '''
         # test
         robot = Robot_test(order_count, order_list, isFinish_queue)
@@ -408,8 +411,8 @@ def executeRobot(request):
         time.sleep(3.1)
         thread2.start()
         thread1.join(); thread2.join()
-        RESET = False
         # '''
+
         robot_state = "finish" if isFinish_queue.get() else "reset"
         print('python stop!!')
         
