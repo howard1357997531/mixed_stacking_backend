@@ -260,21 +260,21 @@ class Robot_test():
         self.order_count = order_count
         self.order_list = order_list
         self.isFinish_queue = isFinish_queue
-        self.count = 1
-        self.detect_count = 1   # 視覺偵測記數
+        self.detect_count = 1             # 視覺偵測記數
+        self.new_round_random_count = 1   # 每一輪視覺偵測記數(新一輪都會重置為1)
         self.has_error_detect_list = []
 
     def supply_check(self):
         while self.supply:
             if self.camera_detect:
                 # 一開始先給隨機偵測數量，後面給的數量不會低於前面數量
-                self.detect_count = random.randint(self.detect_count, 4)
-                detect_list = self.order_list[self.count - 1: self.count - 1 + self.detect_count]
+                self.new_round_random_count = random.randint(self.new_round_random_count, 4)
+                detect_list = self.order_list[self.detect_count - 1: self.detect_count - 1 + self.new_round_random_count]
                 error_count = random.randint(0, len(detect_list) - 1)
                 # 第一個固定對錯，後面隨機給對錯
                 error_index = list(range(1, len(detect_list)))
                 error_list_index = random.sample(error_index, error_count)
-                # print(f'第{self.count}次')
+                # print(f'第{self.detect_count}次')
                 # print('detect_list: ', detect_list)
                 # print('first has_error_detect_list: ', self.has_error_detect_list)
                 # print('error_count: ', error_count)
@@ -285,7 +285,7 @@ class Robot_test():
 
                 # 第一個固定偵測對錯(基數全對，偶數三秒鐘後變對)
                 # print('time_count: ', self.time_count)
-                if self.count % 2 == 0:
+                if self.detect_count % 2 == 0:
                     if self.time_count <= 4:
                         self.has_error_detect_list[0] = 'error'
                         websocket_robot_state('error')
@@ -301,37 +301,35 @@ class Robot_test():
                 # print('final has_error_detect_list:', self.has_error_detect_list)
                 websocket_visual_result(self.has_error_detect_list, None)
 
-                time.sleep(1)
+                time.sleep(1.5)
                 self.time_count += 1
-                time.sleep(1)
+                time.sleep(1.5)
             
     def robot(self):
-        time.sleep(3)
+        time.sleep(4)
         for i in range(1, self.order_count + 1):
             websocket_object_count(i)
             websocket_robot_state('prepare')
             print(f'準備操作第{i}個物件')
             
             while True:
-                if self.time_count == 6:
+                if self.time_count == 4:
                     # 手臂向下夾取物件時會停止拍照，直到升到某個相機照不到的高度才會繼續拍照
                     self.camera_detect = False
                     print('停止偵測')
-                    if self.count < self.order_count:
-                        self.count += 1
+                    if self.detect_count < self.order_count:
+                        self.detect_count += 1
 
-                    next_name = self.order_list[self.count] if self.count < self.order_count else ""
-                    websocket_object_name(self.order_list[self.count - 1], next_name)
-                    
-                    self.detect_count = 1
+                    next_name = self.order_list[self.detect_count] if self.detect_count < self.order_count else ""
+                    self.new_round_random_count = 1
                     self.has_error_detect_list = []
                     self.time_count = 1
                     time.sleep(1)
                     self.camera_detect = True
                     # 開始偵測之後再發下一個count，不然前台的detect result 還是上一個的
                     # 因為停止偵測之後就不再更新
-                    time.sleep(0.00)
-                    websocket_visual_result(None, self.count)
+                    websocket_visual_result(None, self.detect_count)
+                    websocket_object_name(self.order_list[self.detect_count - 1], next_name)
                     print('開始偵測')
                     time.sleep(1)
                     websocket_robot_state('operate')
@@ -374,7 +372,7 @@ def robot_test(order_count, order_list, isFinish_queue):
     isFinish_queue.put(True)
     websocket_robot_state('finish')
 
-# from .arm.Yaskawa_function import Yaskawa_control
+from .arm.Yaskawa_function import Yaskawa_control
 ROBOT = None
 
 @api_view(['POST'])
@@ -387,20 +385,20 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        '''
+        # '''
         ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # demo1
         # thread1 = threading.Thread(target=ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
         # thread1.start()
         # thread1.join()
         # demo2
-        # thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
-        # thread1.start()
-        # time.sleep(2)
-        # thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
-        # thread2.start()
+        thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1.start()
+        time.sleep(2)
+        thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
+        thread2.start()
 
-        # thread1.join(); thread2.join()
+        thread1.join(); thread2.join()
         '''
         # test
         robot = Robot_test(order_count, order_list, isFinish_queue)
@@ -408,7 +406,7 @@ def executeRobot(request):
         thread1 = threading.Thread(target=robot.robot)
         thread2 = threading.Thread(target=robot.supply_check)
         thread1.start()
-        time.sleep(3.1)
+        time.sleep(4.1)
         thread2.start()
         thread1.join(); thread2.join()
         # '''
@@ -425,7 +423,7 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        '''
+        # '''
         if mode == 'pause':
             ROBOT.pause()
         elif mode == 'unPause':
