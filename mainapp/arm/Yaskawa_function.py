@@ -299,7 +299,7 @@ class Yaskawa_control():
                 dbrcount = qr_object.decode_dbrcount(image)
                 pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
                 enddecodetime =  time.time()
-                print(dbrcount, pyzbarcount)
+                print('QR Code', dbrcount, pyzbarcount)
                 twodecodetime=enddecodetime -startdecodetime
                 # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
                 # # Calculate frames per second
@@ -321,7 +321,7 @@ class Yaskawa_control():
                     box_id = qr_dict['box_id']
                     angle = qr_dict['angle']
                     for idx, box in enumerate(qr_dict['box_id']):
-                        if box == '#20':
+                        if '20' in box:
                             angle[idx] = 0
 
                     cv2.putText(image, f"ID: {box_id}, angle: {angle}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
@@ -341,7 +341,7 @@ class Yaskawa_control():
                     # --------------------------------
 
                     return Box_id,angle
-            time.sleep(0.3)       
+            time.sleep(0.1)       
 
     def thread2_supplycheck(self):
         self.frontend_display=4

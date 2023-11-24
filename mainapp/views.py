@@ -372,7 +372,7 @@ def robot_test(order_count, order_list, isFinish_queue):
     isFinish_queue.put(True)
     websocket_robot_state('finish')
 
-# from .arm.Yaskawa_function import Yaskawa_control
+from .arm.Yaskawa_function import Yaskawa_control
 ROBOT = None
 
 @api_view(['POST'])
@@ -385,7 +385,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        '''
+        # '''
         ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # demo1
         # thread1 = threading.Thread(target=ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
@@ -423,7 +423,7 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        '''
+        # '''
         if mode == 'pause':
             ROBOT.pause()
         elif mode == 'unPause':
