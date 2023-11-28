@@ -15,6 +15,8 @@ import threading
 # web_socket
 from mainapp.views import (websocket_robot_state, websocket_object_count, 
     websocket_object_name, websocket_visual_result)
+from django.conf import settings
+import os
 # ------------------------------
 
 process = True
@@ -62,11 +64,6 @@ def decimal_to_hex1(decimal):
     hex_reversed = hex_padded[0:2]
     hex_formatted = ' '.join(hex_reversed[i:i+2] for i in range(0, len(hex_reversed), 2))
     return hex_formatted
-
-# -----------------------
-from django.conf import settings
-import os
-# -----------------------
 
 def getdata(orderId):
     # -----------------------

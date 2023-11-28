@@ -250,7 +250,8 @@ from queue import Queue
 import random
 import copy
 
-RESET = False
+TEST_RESET = False
+TEST_RAUSE = False
 
 class Robot_test():
     def __init__(self, order_count, order_list, isFinish_queue):
@@ -265,7 +266,7 @@ class Robot_test():
         self.has_error_detect_list = []
 
     def supply_check(self):
-        while self.supply:
+        while self.supply and not TEST_RESET:
             if self.camera_detect:
                 # 一開始先給隨機偵測數量，後面給的數量不會低於前面數量
                 self.new_round_random_count = random.randint(self.new_round_random_count, 4)
@@ -312,7 +313,7 @@ class Robot_test():
             websocket_robot_state('prepare')
             print(f'準備操作第{i}個物件')
             
-            while True:
+            while not TEST_RESET:
                 if self.time_count == 4:
                     # 手臂向下夾取物件時會停止拍照，直到升到某個相機照不到的高度才會繼續拍照
                     self.camera_detect = False
@@ -324,21 +325,24 @@ class Robot_test():
                     self.new_round_random_count = 1
                     self.has_error_detect_list = []
                     self.time_count = 1
-                    time.sleep(1)
+                    time.sleep(1) if not TEST_RESET else time.sleep(0)
                     self.camera_detect = True
                     # 開始偵測之後再發下一個count，不然前台的detect result 還是上一個的
                     # 因為停止偵測之後就不再更新
                     websocket_visual_result(None, self.detect_count)
                     websocket_object_name(self.order_list[self.detect_count - 1], next_name)
                     print('開始偵測')
-                    time.sleep(1)
+                    time.sleep(1) if not TEST_RESET else time.sleep(0)
                     websocket_robot_state('operate')
                     print('手臂操作中\n')
-                    time.sleep(4)
+                    time.sleep(4) if not TEST_RESET else time.sleep(0)
                     break
         
         self.supply = False
-        self.isFinish_queue.put(True)
+        if TEST_RESET:
+            self.isFinish_queue.put(False)
+        else:
+            self.isFinish_queue.put(True)
 
 def robot_test(order_count, order_list, isFinish_queue):
     time.sleep(2)
@@ -373,11 +377,13 @@ def robot_test(order_count, order_list, isFinish_queue):
     websocket_robot_state('finish')
 
 # from .arm.Yaskawa_function import Yaskawa_control
-ROBOT = None
+# from .arm.kuka_function import Kuka_control
+YASKAWA_ROBOT = None
+KUKA_ROBOT  = None
 
 @api_view(['POST'])
 def executeRobot(request):
-    global ROBOT
+    global YASKAWA_ROBOT, KUKA_ROBOT
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
@@ -386,21 +392,25 @@ def executeRobot(request):
         isFinish_queue = Queue()
         
         '''
-        ROBOT = Yaskawa_control('192.168.1.15', 10040)
+        # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
+        # KUKA_ROBOT = Kuka_control()
         # demo1
-        # thread1 = threading.Thread(target=ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1 = threading.Thread(target=KUKA_ROBOT.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
         # thread1.start()
         # thread1.join()
         # demo2
-        thread1 = threading.Thread(target=ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
-        thread1.start()
-        time.sleep(2)
-        thread2 = threading.Thread(target=ROBOT.thread2_supplycheck)
-        thread2.start()
+        # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1.start()
+        # time.sleep(2)
+        # thread2 = threading.Thread(target=YASKAWA_ROBOT.thread2_supplycheck)
+        # thread2.start()
 
-        thread1.join(); thread2.join()
+        # thread1.join(); thread2.join()
         '''
         # test
+        global TEST_RESET, TEST_RAUSE
+        TEST_RESET = False
         robot = Robot_test(order_count, order_list, isFinish_queue)
         # thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
         thread1 = threading.Thread(target=robot.robot)
@@ -423,20 +433,22 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        '''
+        # YASKAWA_ROBOT KUKA_ROBOT
+        ''' 
         if mode == 'pause':
-            ROBOT.pause()
+            KUKA_ROBOT.pause()
         elif mode == 'unPause':
-            ROBOT.keepgo()
+            KUKA_ROBOT.keepgo()
         elif mode == 'speedUp' or mode == 'speedDown':
             robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
             robot_speed = 100 if robot_speed > 100 else robot_speed
-            speed(robot_speed)
+            robot_speed = 50 if robot_speed >= 50 else robot_speed
+            KUKA_ROBOT.speed(robot_speed)
         elif mode == 'reset':
-            ROBOT.reset()
+            KUKA_ROBOT.reset()
         '''
         # test
-        global RESET
+        global TEST_RESET, TEST_RAUSE
         if mode == 'pause':
             print(mode)
         elif mode == 'unPause':
@@ -446,7 +458,7 @@ def robotSetting(request):
             robot_speed = 100 if robot_speed > 100 else robot_speed
             print(mode, robot_speed)
         elif mode == 'reset':
-            RESET = True
+            TEST_RESET = True
             print(mode)
         # '''
         return Response({}, status=status.HTTP_200_OK)
