@@ -223,7 +223,7 @@ def getWorkOrderData(request):
 def aiCalculate(request):
     worklist_id = request.data.get("id")
     t1 = time.time()
-    activate_cal(worklist_id, unique_code="", step=1)
+    # activate_cal(worklist_id, unique_code="", step=1)
     t2 = time.time()
     training_time = round(t2-t1, 3)
     ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_{worklist_id}', f'box_positions_final.csv')
@@ -346,10 +346,6 @@ class Robot_test():
 def robot_test(order_count, order_list, isFinish_queue):
     time.sleep(2)
     for i in range(1, order_count + 1):
-        if RESET:
-            isFinish_queue.put(False)
-            websocket_robot_state('reset')
-            return
         print(f'第{i}次')
         websocket_object_count(i)
         if i != 1:
