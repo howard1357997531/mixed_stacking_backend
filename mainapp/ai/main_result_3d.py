@@ -8,8 +8,8 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 from collections import defaultdict, Counter
-from model_speed_3d import PlacementProcedure, BRKGA
-from config import Config3d as Config
+from .model_speed_3d import PlacementProcedure, BRKGA
+from .config import Config3d as Config
 # -------------------------
 from django.conf import settings
 import os
@@ -36,7 +36,7 @@ class BoxProcessor:
         }
         # Random Quantity
         quantityR = self.distribute_randomly(11) if randomize_quantity else None
-        with open(csv_file_path, newline='') as csvfile:
+        with open(csv_file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for idx, row in enumerate(reader):
                 width, height, depth = int(row['width']), int(row['height']), int(row['depth'])
@@ -305,6 +305,13 @@ class SaveCSV:
         os.makedirs(results_dir, exist_ok=True)
         return results_dir
     
+    #----------------------------------
+    def create_results_directory_django(self, worklist_id):
+        results_dir = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}')
+        os.makedirs(results_dir, exist_ok=True)
+        return results_dir
+    #----------------------------------
+    
     def save_data_to_csv(self, box_data, result_folder, csv_base_name, baseline_boxes, SAFE_SPACE):
         """Saves the data to different CSV files for different aims."""
         # add cog
@@ -369,7 +376,10 @@ def main(worklist_id, unique_code):
     save_CSV = SaveCSV()
     box_optimizationTrainer = BoxOptimizationTrainer()
 
-    result_folder = save_CSV.create_results_directory()
+    # result_folder = save_CSV.create_results_directory()
+    # ------------------------
+    result_folder = save_CSV.create_results_directory_django(worklist_id)
+    # ------------------------
     inputs = box_processor.load_and_process_data(input_csv, randomize_quantity=Config.CONFIG["RandQuant"])
     baseline_boxes = box_processor.process_boxes_from_csv(input_csv)
     container_data = inputs['V']

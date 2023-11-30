@@ -8,10 +8,9 @@ from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerilaizer, MultipleOrderItemSerilaizer
 from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, ExecutingOrder
 
-from .robot import main, robot_control, speed
-# from .main_result_20230830 import activate_cal
-from .main_result_20230911 import activate_cal
 from .main_result_UI import ai_calculate
+from .ai.main_result_2d import main as main_2d
+from .ai.main_result_3d import main as main_3d
 from io import BytesIO
 import random
 import datetime
@@ -393,12 +392,12 @@ def executeRobot(request):
         
         '''
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
-        # KUKA_ROBOT = Kuka_control()
+        KUKA_ROBOT = Kuka_control()
         # demo1
         # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
-        # thread1 = threading.Thread(target=KUKA_ROBOT.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
-        # thread1.start()
-        # thread1.join()
+        thread1 = threading.Thread(target=KUKA_ROBOT.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1.start()
+        thread1.join()
         # demo2
         # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         # thread1.start()
@@ -535,11 +534,9 @@ def uploadCsv(request):
                     depth = reader[4],
                     quantity = int(reader[5])
                 )
-
     except Exception as e:
         print(f'Error: {str(e)}')
         return Response({'message': 'error'})
-
     return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
 
 @api_view(['POST'])
@@ -555,23 +552,23 @@ def aiTraining(request):
         order.aiTraining_state = "is_training"
         order.save()
         unique_code = order.unique_code
+        
         t1 = time.time()
-        ai_calculate(worklist_id, unique_code, step=2)
+        # ai_calculate(worklist_id, unique_code)
+        main_2d(worklist_id, unique_code)
+        main_3d(worklist_id, unique_code)
         t2 = time.time()
         training_time = round(t2-t1, 3)
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'Figures_step2_{worklist_id}', f'box_positions_final.csv')
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
         ai_df = pd.read_csv(ai_csvfile_path)
         ai_list = ai_df['matched_box_name'].tolist()
         aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-
+        
         order.aiTraining_order = aiResult_str
         order.aiTraining_state = "finish_training"
         order.save()
 
-        # for i in range(50):
-        #     time.sleep(1)
-        #     print(i + 1)
-        # aiResult_str="9,8,5,7,5"
         return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
@@ -603,7 +600,7 @@ def createMultipleOrder(request):
     try:
         orderSelectIdList = request.data.get('orderSelectIdArray')
         inputText = request.data.get('inputText')
-        max_id = MultipleOrder.objects.aggregate(Max("id"))
+        max_id = MultipleOrder.objects.aggregate(Max("id")).get("id__max")
         today = datetime.datetime.now()
         today_mult_order = MultipleOrder.objects.filter(createdAt__year=today.year,
                         createdAt__month=today.month, createdAt__day=today.day, is_today_latest=True)
@@ -617,6 +614,7 @@ def createMultipleOrder(request):
         )
         multiple_order.save()
 
+        # response data
         for order in orderSelectIdList:
             order = Order.objects.filter(id=int(order)).first()
             MultipleOrderItem.objects.create(
@@ -631,7 +629,7 @@ def createMultipleOrder(request):
             multipleOrderList.append({"order": serializer.data})
          
         response_data = {
-            "id": max_id.get("id__max") + 1,
+            "id": max_id + 1,
             "name": inputText,
             "orderSelectId_str": ','.join(map(str, orderSelectIdList)),
             "createdAt": datetime.datetime.now().strftime('%Y/%m/%d  %H:%M'),

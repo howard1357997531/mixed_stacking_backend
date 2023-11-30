@@ -42,6 +42,6 @@ class MultipleOrderSerilaizer(ModelSerializer):
 
     class Meta:
         model = MultipleOrder
-        fields = ("id", "name", "orderSelectId_str", "createdAt", "multipleOrder")
+        fields = ("id", "name", "orderSelectId_str", "is_today_latest", "createdAt", "multipleOrder")
 
 

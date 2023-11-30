@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 import random
 from collections import defaultdict
-from model_speed_2d import PlacementProcedure, BRKGA
-from config import Config2d as Config
+from .model_speed_2d import PlacementProcedure, BRKGA
+from .config import Config2d as Config
 # -------------------------
 from django.conf import settings
 import os
@@ -28,7 +28,7 @@ class BoxProcessor:
         'v': [],  # boxes with different shape
         'V': [self.container_dims] * self.total_bins   # containers with fixed shape
         }
-        with open(csv_file_path, newline='') as csvfile:
+        with open(csv_file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             box_depths = {}  # This will map box types to their depths
             for idx, row in enumerate(reader):
@@ -290,8 +290,8 @@ class SaveCSV:
         return results_dir
     
     #----------------------------------
-    def create_results_directory_django(worklist_id):
-        results_dir = os.path.join(settings.MEDIA_ROOT, f'Figures_{worklist_id}')
+    def create_results_directory_django(self, worklist_id):
+        results_dir = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}')
         os.makedirs(results_dir, exist_ok=True)
         return results_dir
     #----------------------------------
@@ -356,13 +356,14 @@ def main(worklist_id, unique_code):
     CSV_generator = CSVgenerator()
     save_CSV = SaveCSV()
     box_optimizationTrainer = BoxOptimizationTrainer()
-
+    
     # result_folder = save_CSV.create_results_directory()
     # ------------------------
     result_folder = save_CSV.create_results_directory_django(worklist_id)
     # ------------------------
     inputs = box_processor.load_and_process_data(input_csv)
     baseline_boxes = box_processor.process_boxes_from_csv(input_csv)
+    
     container_data = inputs['V']
     print(len(inputs['v']))
     print(len(inputs['V']))

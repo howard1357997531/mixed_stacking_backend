@@ -49,7 +49,7 @@ AI_TRAINING_STATE_CHOICES = (
 )
 
 def upload_to(instance, filename):
-    return os.path.join("csv_file_step2", f"{instance.unique_code}.csv")
+    return os.path.join("input_csv", f"{instance.unique_code}.csv")
 
 class Order(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
