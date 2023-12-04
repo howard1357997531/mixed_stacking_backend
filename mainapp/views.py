@@ -594,7 +594,7 @@ def getMultipleOrderData(request):
 @api_view(['POST'])
 def createMultipleOrder(request):
     try:
-        orderSelectIdList = request.data.get('orderSelectIdArray')
+        orderSelectData = request.data.get('orderSelectData')
         inputText = request.data.get('inputText')
         max_id = MultipleOrder.objects.aggregate(Max("id")).get("id__max")
         today = datetime.datetime.now()
@@ -606,33 +606,35 @@ def createMultipleOrder(request):
 
         multiple_order = MultipleOrder.objects.create(
             name = inputText,
-            orderSelectId_str = ','.join(map(str, orderSelectIdList))
+            orderSelectId_str = ','.join(orderSelectData)
         )
         multiple_order.save()
 
+        # 去除重複
+        orderSelectSet = set(map(lambda x: int(x.split('*')[0]), orderSelectData))
         # response data
-        for order in orderSelectIdList:
+        for order in orderSelectSet:
             order = Order.objects.filter(id=int(order)).first()
             MultipleOrderItem.objects.create(
                 multiple_order = multiple_order,
                 order = order
             )
 
-        multipleOrderList = []
-        for i in orderSelectIdList:
-            order = Order.objects.filter(id=int(i)).first()
-            serializer = OrderSerializer(order, many=False)
-            multipleOrderList.append({"order": serializer.data})
+        # multipleOrderList = []
+        # for i in orderSelectData:
+        #     order = Order.objects.filter(id=int(i)).first()
+        #     serializer = OrderSerializer(order, many=False)
+        #     multipleOrderList.append({"order": serializer.data})
          
-        response_data = {
-            "id": max_id + 1,
-            "name": inputText,
-            "orderSelectId_str": ','.join(map(str, orderSelectIdList)),
-            "createdAt": datetime.datetime.now().strftime('%Y/%m/%d  %H:%M'),
-            "multipleOrder": multipleOrderList
-        }
+        # response_data = {
+        #     "id": max_id + 1,
+        #     "name": inputText,
+        #     "orderSelectId_str": ','.join(map(str, orderSelectData)),
+        #     "createdAt": datetime.datetime.now().strftime('%Y/%m/%d  %H:%M'),
+        #     "multipleOrder": multipleOrderList
+        # }
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response('asd', status=status.HTTP_200_OK)
     except:
         return Response({"error_msg": "建立失敗，再試一次"}, status=status.HTTP_400_BAD_REQUEST)
 
