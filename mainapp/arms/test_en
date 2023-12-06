@@ -1,0 +1,29 @@
+1. Open test_demenssion.py
+2. Modify robot IP&port(10行&11行)
+3. Camera parameter(12)
+4. Open Camera(14)
+5. Define Crop area(15)
+6. Define Dimenssion OBJECT(16 )
+7. Define QR　OBJECT(17)
+8. Define yaskawa OBJECT(18)
+9. Capture Image(21)
+10. capture Image and point cloud (25)
+11. Crop Area(26)
+12. If object pass sensor(26)
+    set point clouud to dimenssion object(27)
+    
+    If only angle detectionm uncomment line 42.
+    if only qr result, uncomment line 45.
+    if only classfication id, uncomment line 51.
+
+    
+    Get dimenssion object classfication result(40)
+
+    put text on image(43)
+    show image(44&45)
+    log box id and angle
+13. if non object pass sensor
+
+　　show image(48&49)
+
+Caption crop area on line 15.

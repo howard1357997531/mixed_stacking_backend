@@ -371,14 +371,16 @@ def robot_test(order_count, order_list, isFinish_queue):
     isFinish_queue.put(True)
     websocket_robot_state('finish')
 
-# from .arm.Yaskawa_function import Yaskawa_control
+# from .arms.Yaskawa_function import Yaskawa_control
+# from .arms.Yaskawa_function_buffer import Yaskawa_control as Yaskawa_control_buffer
 # from .arm.kuka_function import Kuka_control
+YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
 KUKA_ROBOT  = None
 
 @api_view(['POST'])
 def executeRobot(request):
-    global YASKAWA_ROBOT, KUKA_ROBOT
+    global YASKAWA_ROBOT_BUFFER, YASKAWA_ROBOT, KUKA_ROBOT
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
@@ -387,20 +389,31 @@ def executeRobot(request):
         isFinish_queue = Queue()
         
         '''
-        # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
-        KUKA_ROBOT = Kuka_control()
+        # YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
+        YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
+        # KUKA_ROBOT = Kuka_control()
+
         # demo1
         # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo1, args=(orderId, order_list, order_count, isFinish_queue))
-        thread1 = threading.Thread(target=KUKA_ROBOT.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
-        thread1.start()
-        thread1.join()
+        # thread1 = threading.Thread(target=KUKA_ROBOT.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1.start()
+        # thread1.join()
+
         # demo2
-        # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1.start()
+        time.sleep(2)
+        thread2 = threading.Thread(target=YASKAWA_ROBOT.thread2_supplycheck)
+        thread2.start()
+        thread1.join(); thread2.join()
+
+        # demo3
+        # YASKAWA_ROBOT_BUFFER.dectect_open()
+        # thread1 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
         # thread1.start()
         # time.sleep(2)
-        # thread2 = threading.Thread(target=YASKAWA_ROBOT.thread2_supplycheck)
+        # thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.thread2_supplycheck)
         # thread2.start()
-
         # thread1.join(); thread2.join()
         '''
         # test
@@ -428,19 +441,19 @@ def robotSetting(request):
     try:
         data = request.data
         mode = data.get('mode')
-        # YASKAWA_ROBOT KUKA_ROBOT
+        # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
         ''' 
         if mode == 'pause':
-            KUKA_ROBOT.pause()
+            YASKAWA_ROBOT.pause()
         elif mode == 'unPause':
-            KUKA_ROBOT.keepgo()
+            YASKAWA_ROBOT.keepgo()
         elif mode == 'speedUp' or mode == 'speedDown':
             robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
             robot_speed = 100 if robot_speed > 100 else robot_speed
-            robot_speed = 50 if robot_speed >= 50 else robot_speed
-            KUKA_ROBOT.speed(robot_speed)
+            robot_speed = 70 if robot_speed >= 70 else robot_speed
+            YASKAWA_ROBOT.speed(robot_speed)
         elif mode == 'reset':
-            KUKA_ROBOT.reset()
+            YASKAWA_ROBOT.reset()
         '''
         # test
         global TEST_RESET, TEST_RAUSE
@@ -550,13 +563,19 @@ def aiTraining(request):
         unique_code = order.unique_code
         
         t1 = time.time()
-        # ai_calculate(worklist_id, unique_code)
+        # '''
+        ai_calculate(worklist_id, unique_code)
+        '''
         main_2d(worklist_id, unique_code)
         main_3d(worklist_id, unique_code)
+        # '''
         t2 = time.time()
         training_time = round(t2-t1, 3)
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        # '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        '''
         ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # '''
         ai_df = pd.read_csv(ai_csvfile_path)
         ai_list = ai_df['matched_box_name'].tolist()
         aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
