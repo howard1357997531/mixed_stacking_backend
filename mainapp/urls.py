@@ -17,6 +17,7 @@ urlpatterns = [
     path('executingOrder/', views.executingOrder, name="executingOrder"),
     path('getMultipleOrderData/', views.getMultipleOrderData, name="getMultipleOrderData"),
     path('createMultipleOrder/', views.createMultipleOrder, name="createMultipleOrder"),
+    path('deleteMultipleOrder/', views.deleteMultipleOrder, name="deleteMultipleOrder"),
     
 
     # qrcode

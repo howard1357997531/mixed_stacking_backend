@@ -11,9 +11,9 @@ from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, Mul
 from .main_result_UI import ai_calculate
 from .ai.main_result_2d import main as main_2d
 from .ai.main_result_3d import main as main_3d
+from datetime import datetime
 from io import BytesIO
 import random
-import datetime
 import qrcode
 import pandas as pd
 import time
@@ -182,7 +182,7 @@ def createWorkOrder(request):
         if unique_code_exist is None:
             break
     
-    today = datetime.datetime.now()
+    today = datetime.now()
     today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month,
             createdAt__day=today.day)
     if today_order.exists():
@@ -515,7 +515,7 @@ def uploadCsv(request):
 
             # 如果用一次固定時間，然後對所有供單最後設為is_today_latest=true會發生問題
             # 因為有可能有過00:00(隔天)問題，可能要每存一次csv都要檢查一次時間
-            today = datetime.datetime.now()
+            today = datetime.now()
             today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
                         createdAt__day=today.day)
             today_order_has_latest = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
@@ -616,7 +616,7 @@ def createMultipleOrder(request):
         orderSelectData = request.data.get('orderSelectData')
         inputText = request.data.get('inputText')
         max_id = MultipleOrder.objects.aggregate(Max("id")).get("id__max")
-        today = datetime.datetime.now()
+        today = datetime.now()
         today_mult_order = MultipleOrder.objects.filter(createdAt__year=today.year,
                         createdAt__month=today.month, createdAt__day=today.day, is_today_latest=True)
         
@@ -639,25 +639,34 @@ def createMultipleOrder(request):
                 order = order
             )
 
-        # multipleOrderList = []
-        # for i in orderSelectData:
-        #     order = Order.objects.filter(id=int(i)).first()
-        #     serializer = OrderSerializer(order, many=False)
-        #     multipleOrderList.append({"order": serializer.data})
-         
-        # response_data = {
-        #     "id": max_id + 1,
-        #     "name": inputText,
-        #     "orderSelectId_str": ','.join(map(str, orderSelectData)),
-        #     "createdAt": datetime.datetime.now().strftime('%Y/%m/%d  %H:%M'),
-        #     "multipleOrder": multipleOrderList
-        # }
+        multipleOrderList = []
+        for i in orderSelectSet:
+            order = Order.objects.filter(id=int(i)).first()
+            serializer = OrderSerializer(order, many=False)
+            multipleOrderList.append({"order": serializer.data})
+        
+        response_data = {
+            "id": multiple_order.id,
+            "name": inputText,
+            "orderSelectId_str": ','.join(orderSelectData),
+            "is_today_latest": True,
+            "createdAt": datetime.now().strftime('%Y/%m/%d  %H:%M'),
+            "multipleOrder": multipleOrderList
+        }
 
-        return Response('asd', status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
     except:
         return Response({"error_msg": "建立失敗，再試一次"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+@api_view(['POST'])
+def deleteMultipleOrder(request):
+    try:
+        order_id = request.data.get('orderId')
+        multiple_order = MultipleOrder.objects.filter(id=order_id).first()
+        multiple_order.delete()
+        return Response('ok', status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': 'fail'}, status=status.HTTP_400_BAD_REQUEST)
 
 # qrcode
 

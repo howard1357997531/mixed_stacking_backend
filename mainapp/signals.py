@@ -2,7 +2,7 @@ from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from django.conf import settings
 from django.db.models import Max 
-from .models import Order
+from .models import Order, MultipleOrder
 import os
 import shutil
 
@@ -11,8 +11,8 @@ def OrderDeleteSignal(sender, instance, **kwargs):
     try:
         if instance.is_today_latest:
             date = instance.createdAt
-            order_list = Order.objects.filter(is_today_latest=False, createdAt__year=date.year,
-                createdAt__month=date.month, createdAt__day=date.day)
+            order_list = Order.objects.filter(createdAt__year=date.year, createdAt__month=date.month,
+                createdAt__day=date.day, is_today_latest=False)
             if order_list.exists():
                 max_id = order_list.aggregate(Max('id')).get('id__max')
                 order = Order.objects.filter(id=max_id).first()
@@ -30,3 +30,18 @@ def OrderDeleteSignal(sender, instance, **kwargs):
     except:
         pass
 
+@receiver(post_delete, sender=MultipleOrder)
+def multipleOrderDeleteSignal(sender, instance, **kwargs):
+    try:
+        if instance.is_today_latest:
+            date = instance.createdAt
+            multiOrder_list = MultipleOrder.objects.filter(createdAt__year=date.year, 
+                createdAt__month=date.month, createdAt__day=date.day, is_today_latest=False)
+            
+            if multiOrder_list.exists():
+                max_id = multiOrder_list.aggregate(Max('id')).get('id__max')
+                multiOrder = MultipleOrder.objects.filter(id=max_id).first()
+                multiOrder.is_today_latest = True
+                multiOrder.save()
+    except:
+        pass
