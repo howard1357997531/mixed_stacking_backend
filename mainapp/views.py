@@ -601,6 +601,32 @@ def getOrderData(request):
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+def editOrder(request):
+    try:
+        id = request.data.get('orderSelectData')
+        order = Order.objects.filter(id=int(id)).first()
+        orderItem = OrderItem.objects.filter(order=order)
+        print(orderItem)
+        for i in orderItem:
+            if i.name == '#35':
+                i.quantity = 0
+                i.save()
+        return Response('ok', status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': 'error'}, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['POST'])
+def deleteOrder(request):
+    try:
+        delete_list = request.data.get('orderSelectData')
+        for i in delete_list:
+            order = Order.objects.filter(id=int(i)).first()
+            order.delete()
+        return Response('ok', status=status.HTTP_200_OK)
+    except:
+        return Response({'error_msg': 'error'}, status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(['GET'])
 def getMultipleOrderData(request):
     try:
