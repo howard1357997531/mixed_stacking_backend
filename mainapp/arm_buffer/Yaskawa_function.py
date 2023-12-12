@@ -32,6 +32,7 @@ config =  {
             "depthMode":"WFOV",
             "algin":"color"
         }
+        
 
 #camera = azuredkCamera.azureDK(config)
 try:
@@ -42,7 +43,8 @@ except :
     print('No Camera camera.openCamera')
 
 #crop = {'xmin' :150, 'xmax':1920,'ymin':450, 'ymax':790, 'total height':495}  resolution 1920*1280    *******
-crop = {'xmin' :10, 'xmax':1280,'ymin':280, 'ymax':550, 'total height':270} # resolution 1280*720      *******
+
+crop = {'xmin' :70, 'xmax':1280,'ymin':280, 'ymax':550, 'total height':270} # resolution 1280*720      *******
 
 dimenssion_object = Dimension_2_3D(crop = crop)
 qr_object = qrClass(crop = crop)
@@ -50,29 +52,19 @@ qr_object = qrClass(crop = crop)
 dimenssion_3D_object = Dimension_3D(crop = crop)
 
 def voting_preprocess(dst, src, key):
+
     dst[src[key]] = dst.get(src[key], 0) + 1
     return dst
-
 def voting(result, key_list, data_list):
+            
     for key in key_list:
         for src in data_list:
-            result_dict = voting_preprocess(result_dict, src, key)         
+            result_dict = voting_preprocess(result_dict, src, key)
+            
     return result
 
-# Supply = pd.read_csv('box_positions_conveyor.csv')
-# Supply_namecolumns = Supply['matched_box_name']
-# Supply_columns = Supply[['pos_x', 'pos_y', 'pos_z']]
-
-# buffer_supply = pd.read_csv('box_positions_conveyor_catch.csv')
-# buffer_namecolumns = buffer_supply['matched_box_name']
-# buffer_catch = buffer_supply[['pos_x', 'pos_y', 'pos_z']]
-# buffer_put = buffer_supply[['bin_name', 'buffer_x', 'buffer_y', 'buffer_z', 'orientation']]
-
-# Place = pd.read_csv('box_positions_final.csv')
-# Place_columns = Place[['bin_name','X_cog', 'Y_cog', 'Z_cog','orientation']]
-# name_list1=[]
-# for name in Supply_namecolumns:
-#     name_list1.append(name)
+##########################################################################
+#上面是AI的
 ##########################################################################
 # data process
 def decimal_to_hex(decimal):
@@ -91,14 +83,11 @@ def decimal_to_hex1(decimal):
   
 def mix_pack(orderId):  ####混料系統####
     # ---------------------------
-    box_positions_conveyor_path = os.path.join(
-        settings.MEDIA_ROOT, f'ai_figure/Figures_{orderId}', 'box_positions_conveyor.csv')
-    box_positions_final_path = os.path.join(
-        settings.MEDIA_ROOT, f'ai_figure/Figures_{orderId}', 'box_positions_final.csv')
-    Supply = pd.read_csv(box_positions_conveyor_path)
-    Supply_columns = Supply[['pos_x', 'pos_y', 'pos_z']]
-    Place = pd.read_csv(box_positions_final_path)
-    Place_columns = Place[['bin_name','X_cog', 'Y_cog', 'Z_cog','orientation']]
+    box_positions_layer_path = os.path.join(
+        settings.MEDIA_ROOT, f'ai_figure/Figures_{orderId}', 'box_positions_layer.csv')
+    Supply = pd.read_csv(box_positions_layer_path)
+    Supply_columns = Supply[['conveyor_x', 'conveyor_y', 'conveyor_z']]
+    Place_columns = Supply[['bin_name','X_cog', 'Y_cog', 'Z_cog','orientation']]
     # ---------------------------
     catch_list = []
     put_list = []
@@ -120,7 +109,7 @@ def mix_pack(orderId):  ####混料系統####
         put_list.append(place_data)
         count_list+=1
 
-    return (catch_list,put_list,count_list)
+    return (catch_list, put_list,count_list)
 
 def buffer_11box():
     # ---------------------------
@@ -131,7 +120,7 @@ def buffer_11box():
     buffer_catch = buffer_supply[['pos_x', 'pos_y', 'pos_z']]
     buffer_put = buffer_supply[['bin_name', 'buffer_x', 'buffer_y', 'buffer_z', 'orientation']]
     # ---------------------------
-    Quanlity = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     buffer_name = []
     posture1 = [0.0,0.0,180.0]
     posture2 = [90.0,0.0,180.0]
@@ -154,7 +143,7 @@ def buffer_11box():
         buffer_put_list.append(buffer_put_data)
 
 
-    return (buffer_name, buffer_catch_list, buffer_put_list, Quanlity)
+    return (buffer_name, buffer_catch_list, buffer_put_list, quanlity)
 
 def smart_pack(orderId):  ####智慧堆棧系統####
     # ---------------------------
@@ -170,24 +159,9 @@ def smart_pack(orderId):  ####智慧堆棧系統####
     posture1=[180.0,0.0,0.0]
     posture2=[180.0,0.0,90.0]
     count_list=1
-
-    for index, row in Supply_columns.iterrows():
-        supply_initial = row.to_list()
-        Base=[2]
-        supply_data=Base+supply_initial+posture1    
-        catch_list.append(supply_data)
-
-    for index, row in Place_columns.iterrows():
-        place_initial = row.to_list()
-        posture = posture2 if place_initial[4] == 1.0 else posture1    
-        Base = [3] if place_initial[0] == 1 else [4]
-        place_data=Base+place_initial[1:4]+posture
-        put_list.append(place_data)
-        count_list+=1
-
-    return (catch_list,put_list,count_list)
 ##########################################################################
 class Yaskawa_control():
+    
     def __init__(self, ip ,port):
         self.server_ip = ip
         self.server_port = port
@@ -196,10 +170,21 @@ class Yaskawa_control():
         self.client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # name_list1=[]
+        # Supply = pd.read_csv('box_positions_layer.csv')
+        # Supply_namecolumns = Supply['matched_box_name']
+        # for name in Supply_namecolumns:
+        #     name_list1.append(name)
+        # self.name_list = name_list1[:]
+        self.name_list = []
+        self.pallet = 0
+        self.name_all = []
+        self.angle_all = []
+        self.buffer_order = []
         self.system_choose = 1
         self.count = 1
+        self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.count_list = 1
-        self.name_list = []
         self.angle_checked = []
         self.checknumber = 0
         self.motionnumber = 1
@@ -253,7 +238,7 @@ class Yaskawa_control():
         self.frontend_boxnumber = 0
         self.frontend_motion = 0
         ########################前台-上位機########################
-        
+
         # websocket
         self.order_count = 1
         self.robot_count = 1
@@ -266,7 +251,11 @@ class Yaskawa_control():
     async def send_position(self):
         while not self.Pc_finish:
             if self.packetsendlock:
-                position_mapping = {'process': '11','case': '12', 'base': '06', 'p1': '04', 'p2': '05', 'p3': '06', 'p4': '09', 'p5': '08', 'p6': '07'}
+                position_mapping = {'process': '11','case': '12', 'base': '', 'p1': '04', 'p2': '05', 'p3': '06', 'p4': '09', 'p5': '08', 'p6': '07'}
+                if self.motion_state == 1:
+                    position_mapping['base'] = '05'
+                elif self.motion_state == 2:
+                    position_mapping['base'] = '06'
                 element_mapping = {'process': '7C','case': '7C', 'base': '7F', 'p1': '7C', 'p2': '7C', 'p3': '7C', 'p4': '7C', 'p5': '7C', 'p6': '7C'}
                 Datalengh_mapping = {'process': '04','case': '04', 'base': '01', 'p1': '04', 'p2': '04', 'p3': '04', 'p4': '04', 'p5': '04', 'p6': '04'}
                 layer_mapping = {'process': '01','case': '01', 'base': '04', 'p1': '01', 'p2': '01', 'p3': '01', 'p4': '01', 'p5': '01', 'p6': '01'}
@@ -280,12 +269,14 @@ class Yaskawa_control():
 
                     data_packet = bytes.fromhex(f"59 45 52 43 20 00 {Datalengh_mapping[position]} 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 {element_mapping[position]} 00 {position_mapping[position]} 00 {layer_mapping[position]} 02 00 00 " + hex_value.replace(" ", ""))
                     self.client_socket3.sendto(data_packet, (self.server_ip, self.server_port))
+                    response, addr = self.client_socket3.recvfrom(1024)
+                    await asyncio.sleep(0)
                 self.packetsendlock = False
             await asyncio.sleep(0.1)
 
     async def send_control(self):
         while not self.Pc_finish:
-            self.Pc_control = (self.Pc_reset << 5) + (self.Pc_keepgo << 4) + (self.Pc_pause << 3)+ (self.Pc_start << 2)+ self.Pc_servo
+            self.Pc_control = (self.Pc_reset << 5) + (self.Pc_keepgo << 4) + (self.Pc_pause << 3) + (self.Pc_start << 2) + self.Pc_servo
             Pc_control_string = decimal_to_hex1(self.Pc_control)
             data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 78 00 8D 0A 01 10 00 00 " + Pc_control_string.replace(" ", ""))
             self.client_socket0.sendto(data_packet, (self.server_ip, self.server_port)) 
@@ -313,15 +304,15 @@ class Yaskawa_control():
                 hex_reversed = signal_hex[2:4] + signal_hex[0:2]
                 signal_int = int(hex_reversed,16)
                 signal_binary = bin(signal_int)[2:].zfill(16)
-                self.Robot_start=bool(int(signal_binary[-1]))
-                self.Robot_initial=bool(int(signal_binary[-2]))
-                self.Robot_received=bool(int(signal_binary[-3]))
-                self.Robot_motion=bool(int(signal_binary[-4]))
-                self.Robot_boxchecked=bool(int(signal_binary[-5]))
-                self.Robot_action=bool(int(signal_binary[-6]))
-                self.Robot_sensor1=bool(int(signal_binary[-9]))
-                self.Robot_sensor2=bool(int(signal_binary[-10])) 
-                self.Robot_sensor3=bool(int(signal_binary[-11]))
+                self.Robot_start = bool(int(signal_binary[-1]))
+                self.Robot_initial = bool(int(signal_binary[-2]))
+                self.Robot_received = bool(int(signal_binary[-3]))
+                self.Robot_motion = bool(int(signal_binary[-4]))
+                self.Robot_boxchecked = bool(int(signal_binary[-5]))
+                self.Robot_action = bool(int(signal_binary[-6]))
+                self.Robot_sensor1 = bool(int(signal_binary[-9]))
+                self.Robot_sensor2 = bool(int(signal_binary[-10])) 
+                self.Robot_sensor3 = bool(int(signal_binary[-11]))
                 I=I+1
                 # print(I)
                 await asyncio.sleep(0)
@@ -343,43 +334,43 @@ class Yaskawa_control():
     ###############################I/O通訊用#################################  
     ###############################即時控制用#################################   
     def start(self):
-        self.Pc_system=True
-        self.Pc_servo=3
-        self.Pc_start=True
+        self.Pc_system = True
+        self.Pc_servo = 3
+        self.Pc_start = True
 
     def pause(self):
-        self.frontend_motion=9
-        self.Pc_keepgo=False
-        self.Pc_pause=True
+        self.frontend_motion = 9
+        self.Pc_keepgo = False
+        self.Pc_pause = True
 
     def keepgo(self):
-        self.frontend_motion=10
-        self.Pc_pause=False
-        self.Pc_keepgo=True
-        self.Pc_start=False
+        self.frontend_motion = 10
+        self.Pc_pause = False
+        self.Pc_keepgo = True
+        self.Pc_start = False
         time.sleep(0.1)
-        self.Pc_start=True
+        self.Pc_start = True
 
     def reset(self):
-        self.Pc_keepgo=False
-        self.Pc_pause=True
+        self.Pc_keepgo = False
+        self.Pc_pause = True
         time.sleep(0.1)
-        self.Pc_start=False
-        self.Pc_servo=0
-        self.Pc_reset=True
+        self.Pc_start = False
+        self.Pc_servo = 0
+        self.Pc_reset = True
         time.sleep(0.1)
-        self.Pc_pause=False
-        self.Pc_reset=False
-        self.Pc_system=False
+        self.Pc_pause = False
+        self.Pc_reset = False
+        self.Pc_system = False
 
     def speed(self,D_data):
-        D_data=D_data*70
-        D_data_hex= decimal_to_hex(D_data)
+        D_data = D_data*70
+        D_data_hex = decimal_to_hex(D_data)
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 04 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 01 00 01 02 00 00  " + D_data_hex.replace(" ", ""))
         self.client_socket4.sendto(data_packet, (self.server_ip, self.server_port))
 
     def button_switch(self,a):
-        hex_value=decimal_to_hex1(int(a))
+        hex_value = decimal_to_hex1(int(a))
         data_packet = bytes.fromhex(f"59 45 52 43 20 00 01 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7A 00 08 00 01 02 00 00  " + hex_value.replace(" ", ""))
         self.client_socket4.sendto(data_packet, (self.server_ip, self.server_port))
 
@@ -431,7 +422,6 @@ class Yaskawa_control():
             data_packet = bytes.fromhex(f"59 45 52 43 20 00 {Datalengh_mapping[position1]} 00 03 01 00 01 00 00 00 00 39 39 39 39 39 39 39 39 7C 00 {position_mapping[position1]} 00 01 {Write_mapping}  00 00 " + hex_value.replace(" ", ""))
             self.client_socket3.sendto(data_packet, (self.server_ip, self.server_port))
             response, addr = self.client_socket3.recvfrom(1024)
-
     ###############################即時控制用################################# 
 
     ##############################每台手臂以下都一樣##########################
@@ -442,7 +432,7 @@ class Yaskawa_control():
 
     def main(self):
         count = 0
-        #out_raw = cv2.VideoWriter(f"recording.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (1920, 1080))
+    
         if not process:
             return None
         for idx_, i in enumerate(camera.getData()):	
@@ -452,36 +442,34 @@ class Yaskawa_control():
 
             image, pc , depth_image =  i
             image_crop = image[crop['ymin']:crop['ymax'], crop['xmin']:crop['xmax']]    
-            cv2.imshow('image_crop', image_crop)
-            cv2.waitKey(1)
-            # if robot.request_sensor11():
-            #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            #
+            # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # adjustedimage = cv2.convertScaleAbs(gray, alpha=1.8, beta=255-240)
+            
+            startdecodetime = time.time()
+            dbrcount = qr_object.decode_dbrcount(image)
+            
+            #image = qr_object.reduce_glare(image)
+            image = qr_object.reduce_highlights(image)         
+            
+            pyzbarcount = qr_object.decode_pyzbarcount(image)
 
-            image_copy = np.copy(image)
-                
+
+            print(dbrcount, pyzbarcount)
+
+            # if dbrcount !=pyzbarcount:
+            #     continue
             if  self.Robot_sensor1 and not self.Pc_finish:
                 Box_id=['#0']
                 angle=str(-1)
                 return Box_id,angle
-
-            startdecodetime = time.time()
-            dbrcount = qr_object.decode_dbrcount(image)
-            pyzbarcount = qr_object.decode_pyzbarcount(image_copy)
-            enddecodetime =  time.time()
-            print(dbrcount, pyzbarcount)
-            twodecodetime=enddecodetime -startdecodetime
-                # print( "Time taken twodecodetime: {0} seconds".format(twodecodetime))
-                # # Calculate frames per second
-            fps2  = 1 / twodecodetime
-                # print( "Estimated  twodecodetime cv2 frames per second : {0}".format(fps2))
-
-            # if True: 
-                # two detect count equal can show
-            if dbrcount !=pyzbarcount:
-                continue
+            
             if dbrcount == pyzbarcount:
-                #image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image.copy(), pc)
+
+                #
+                
                 image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)
+                
                 end_time = time.time()
 
                 # 計算執行時間，換算成 FPS
@@ -492,19 +480,19 @@ class Yaskawa_control():
                     qr_dict = {'box_id': boxID_list, 'angle': angle_list}
                 else:
                     qr_dict = {'box_id': '0', 'angle': '-1'}
-         
+
+                
+                
                 box_id = qr_dict['box_id']
                 angle = qr_dict['angle']
 
-                cv2.putText(image, f"ID: {box_id}, angle: {angle}, FPS:{fps:.2f}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))            
+                cv2.putText(image, f"ID: {box_id}, angle: {angle}, FPS:{fps:.2f}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
+
                 cv2.imshow('image',image)
+
                 
                 k = cv2.waitKey(1)
-                # if k == ord('s'):
-
-                #     img_name = f"image_{datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S')}.png"
-                #     cv2.imwrite(img_name, image)
-                #     print(f"Image saved as {img_name}")
+            
                 Box_id = ['#' + item for item in box_id]
                 print(Box_id,angle)
                 # --------------------------------
@@ -519,20 +507,26 @@ class Yaskawa_control():
                 if k == ord('q'):
                     break
                 return Box_id,angle
+
             time.sleep(0.1)       
 
     def thread2_supplycheck(self):
-        self.frontend_display=4
+        self.frontend_display=2
+        recheck_numberlist = []
+        rebuffer_order= []
+        while self.dectect_system and not self.Pc_finish: 
 
-        while self.dectect_system and not self.Pc_finish:  
-            # if (self.Robot_sensor3 or self.frontend_display==2) and not self.removelock:
+            time.sleep(0.3) 
             if self.Robot_sensor3 and not self.removelock:
-                # print('開始檢測')
-                self.Pc_checked=True
+                print('開始檢測')
+                self.Pc_checked = True
                 result = self. main()
 
-                if result[0][0] != '#0'or result[1] != '-1':                
-                    while self.dectect_system and not self.Pc_finish:   
+                if result[0][0] != '#0'or result[1] != '-1': 
+
+                    while self.dectect_system and not self.Pc_finish:  
+
+                        time.sleep(0.1) 
                         Box_ID, Box_angle  = result[0][:], result[1][:]
                         
                         for item1, item2 in zip(self.name_checked,self.angle_checked):
@@ -540,41 +534,79 @@ class Yaskawa_control():
                                 Box_ID.remove(item1)
                                 Box_angle.remove(item2)
                                 time.sleep(0.1)
-                                
-                        if len(Box_ID)!=0:
-                            print('正確應為',self.name_list[0])
-                            if self.name_list[0] == Box_ID[0]:
-                                self.frontend_display = 1  # 正確
+
+                        if self.name_list and self.checked_quanlity[self.buffer_name.index(self.name_list[0])] > 0:
+                            print(f'buffer 區有{self.name_list[0]}')
+                            self.checknumber = 3
+                            self.checknumberlist.append(self.checknumber)
+                            self.checked_quanlity[self.buffer_name.index(self.name_list[0])] -= 1
+                            self.buffer_order.append(self.name_list.pop(0))
+                            self.frontend_boxnumber += 1
+                        
+                        if self.checknumberlist and self.checknumberlist[-1] == 3:
+                            index_ch = len(self.checknumberlist) - 1
+                            while index_ch >= 0:
+                                if not self.checknumberlist[index_ch] == 3:
+                                    break
+                                index_ch -= 1
+                            recheck_numberlist = self.checknumberlist[index_ch+1:]
+                            rebuffer_order = self.buffer_order[-len(recheck_numberlist):]
+
+                            if len(Box_ID) != 0 and Box_ID[0] in rebuffer_order:
+                                print(f'{Box_ID[0]}跟buffer 區重複了')
+                                index_recheck = rebuffer_order.index(Box_ID[0]) 
+                                recheck_numberlist[index_recheck] = 1  
+                                self.checknumberlist[-len(recheck_numberlist):] = recheck_numberlist
+                                rebuffer_order.remove(Box_ID[0])
+                                self.buffer_order[-len(recheck_numberlist):] = rebuffer_order
+                                self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
+                                self.name_checked.append(Box_ID[0])
+                                self.angle_checked.append(Box_angle[0])
+
                                 ######回傳視覺組比對後順序#####
-                                self.checknumber=1
+                                self.name_all.append(Box_ID[0])
+                                self.angle_all.append(Box_angle[0])
+                                ######回傳視覺組比對後順序#####
+                                break
+                                
+                        if len(Box_ID) != 0 and self.name_list:
+                                
+                            if self.name_list[0] == Box_ID[0]:
+                                print(f'{self.name_list[0]}比對正確')
+                                self.checknumber = 1
                                 self.name_checked.append(self.name_list.pop(0))
                                 self.angle_checked.append(Box_angle[0])
-                                self.checknumberlist.append(self.checknumber)
-                                ######回傳視覺組比對後順序#####       
+                                self.checknumberlist.append(self.checknumber)   
                                 self.frontend_boxnumber += 1
-                                
-                            else:
-                                self.frontend_display = 2  # 錯誤
+
                                 ######回傳視覺組比對後順序#####
-                                self.checknumber=2
+                                self.name_all.append(Box_ID[0])
+                                self.angle_all.append(Box_angle[0])
+                                ######回傳視覺組比對後順序#####
+                                    
+                            else:
+                                print(f'{Box_ID[0]}與{self.name_list[0]}不符')
+                                self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
+                                self.checknumber = 2
                                 self.name_checked.append(Box_ID[0])
                                 self.angle_checked.append(Box_angle[0])
                                 self.checknumberlist.append(self.checknumber)
+
+                                ######回傳視覺組比對後順序#####
+                                self.name_all.append(Box_ID[0])
+                                self.angle_all.append(Box_angle[0])
                                 ######回傳視覺組比對後順序#####
                                 break
                         
                         else:
                             break
-                        time.sleep(0.5)
-                        self.frontend_display=3
 
-                    checked_dict= {'Box_id': self.name_checked ,'angle': self.angle_checked }
+                    self.frontend_display = 1
+                    checked_dict= {'Box_id': self.name_all ,'angle': self.angle_all}
                     file = pd.DataFrame(checked_dict)
-                    file.to_csv('checked_file.csv', index=False)
-                    print('已經看過的箱子',self.name_checked, self.angle_checked, self.checknumberlist)
+                    file.to_csv('checked_file.csv', index = False)
 
-                self.Pc_checked=False
-
+                self.Pc_checked = False
             # ------------------------------
             else:
                 if self.detect_count_change:
@@ -582,54 +614,53 @@ class Yaskawa_control():
                     # 此段為偵測順序改變
                     websocket_visual_result(self.detect_box, self.detect_count)
                 self.detect_count_change = False
-            # ------------------------------    
-
-            time.sleep(0.1)
+            # ------------------------------  
 
         print('檢測關閉')
-        self.frontend_display=0
+        self.frontend_display = 0
     ###############################整合視覺用#################################
     ###############################前台顯示用#################################  
     def frontend_dis(self):
+        self.frontend_display = 2
         while True:
-            self.frontend_display=int(input())
+            self.frontend_display = int(input())
     
-    async def handle(self,websocket):
-        # try:
-            while not self.Pc_finish:
+    # async def handle(self,websocket):
+    #     # try:
+    #         while not self.Pc_finish:
 
-                if self.frontend_motion==0:
-                    await websocket.send('等待啟動')
-                elif self.frontend_motion==1:
-                    await websocket.send('程式啟動中')
-                elif self.frontend_motion==2:
-                    await websocket.send('初始化完畢')
-                elif self.frontend_motion==3:
-                    await websocket.send(f'夾取第{self.count}箱')
-                elif self.frontend_motion==4:
-                    await websocket.send(f'放置第{self.count}箱')
-                elif self.frontend_motion==5:
-                    await websocket.send(f'夾取完畢')
-                elif self.frontend_motion==6:
-                    await websocket.send(f'放置完畢')
-                elif self.frontend_motion==7:
-                    await websocket.send('系統重置')
-                elif self.frontend_motion==8:
-                    await websocket.send('執行完畢回原點')
-                elif self.frontend_motion==9:
-                    await websocket.send('機器人暫停中')
-                elif self.frontend_motion==10:
-                    await websocket.send('機器人繼續動作')
-                await asyncio.sleep(0.1)
+    #             if self.frontend_motion == 0:
+    #                 await websocket.send('等待啟動')
+    #             elif self.frontend_motion == 1:
+    #                 await websocket.send('程式啟動中')
+    #             elif self.frontend_motion == 2:
+    #                 await websocket.send('初始化完畢')
+    #             elif self.frontend_motion == 3:
+    #                 await websocket.send(f'夾取第{self.count}箱')
+    #             elif self.frontend_motion == 4:
+    #                 await websocket.send(f'放置第{self.count}箱')
+    #             elif self.frontend_motion == 5:
+    #                 await websocket.send(f'夾取完畢')
+    #             elif self.frontend_motion == 6:
+    #                 await websocket.send(f'放置完畢')
+    #             elif self.frontend_motion == 7:
+    #                 await websocket.send('系統重置')
+    #             elif self.frontend_motion == 8:
+    #                 await websocket.send('執行完畢回原點')
+    #             elif self.frontend_motion == 9:
+    #                 await websocket.send('機器人暫停中')
+    #             elif self.frontend_motion == 10:
+    #                 await websocket.send('機器人繼續動作')
+    #             await asyncio.sleep(0.1)
     ###############################前台顯示用#################################
-    ###############################程式圖塊化#################################     
+    ###############################程式圖塊化################################# 
     def Robot_Demo(self, orderId, order_list, order_count, isFinish_queue):
         # --------------------------------
         self.orderId = orderId
         self.order_list = order_list
         self.order_count = order_count
         self.isFinish_queue = isFinish_queue
-        box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{orderId}', 'box_positions_conveyor.csv')
+        box_positions_conveyor_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{orderId}', 'box_positions_layer.csv')
         # --------------------------------
         Supply = pd.read_csv(box_positions_conveyor_path)
         Supply_namecolumns = Supply['matched_box_name']
@@ -637,11 +668,10 @@ class Yaskawa_control():
         for name in Supply_namecolumns:
             name_list1.append(name.replace('外箱', '').replace('A', ''))
         self.name_list=name_list1[:]
-
         self.start_tile()
         self.initial_tile()
         self.system_tile()
-        self.end_tile()  
+        self.end_tile() 
 
     def start_tile(self):
         self.thread0.start()
@@ -649,7 +679,7 @@ class Yaskawa_control():
         time.sleep(1)
         self.start()
         print('等待機器人啟動')
-        self.frontend_motion=0
+        self.frontend_motion = 0
         while self.Pc_system:
             if self.Robot_start:
                 print('程式啟動')
@@ -667,8 +697,10 @@ class Yaskawa_control():
             time.sleep(0.1)
 
     def system_tile(self):
+
         catch_list, put_list, self.count_list = mix_pack(self.orderId)
-        buffer_name, buffer_catch, buffer_put, self.bufferquanlity_list = buffer_11box()
+        self.buffer_name, buffer_catch, buffer_put, self.bufferquanlity_list = buffer_11box()
+        
         # -----------------------
         websocket_robot_state('detect')
         # websocket_object_count(1)              
@@ -680,53 +712,65 @@ class Yaskawa_control():
                 websocket_robot_state('prepare')
                 websocket_object_count(1)              
             #------------------------
-
+            
+            self.pallet = put_input[0]
             while self.Pc_system:# 不可刪掉
+                
                 if self.dectect_system:
                     self.Camera_orderchecked_tile()
 
                 if self.motionnumber == 1:
-                    self.robot_count_bool = True
                     self.catch_tile(self.motionnumber, catch_input, 'correct')
                     self.put_tile(self.motionnumber, put_input)
                     break
                 
-                else:
-                    index_buffer = buffer_name.index(self.motionname)
+                elif self.motionnumber == 2:
+                    index_buffer = self.buffer_name.index(self.motionname)
                     self.bufferquanlity = self.bufferquanlity_list[index_buffer]
-                    self.robot_count_bool = False
                     self.catch_tile(self.motionnumber, buffer_catch[index_buffer], 'error')
                     self.put_tile(self.motionnumber, buffer_put[index_buffer])
                     self.bufferquanlity_list[index_buffer] += 1
-                    
 
+                elif self.motionnumber == 3:
+                    if len(self.buffer_order) != 0:
+                        index_buffer = self.buffer_name.index(self.buffer_order[0])
+                        self.bufferquanlity = self.bufferquanlity_list[index_buffer]
+                        self.catch_tile(self.motionnumber, buffer_put[index_buffer], 'correct')
+                        self.buffer_order.remove(self.buffer_order[0])
+                        self.put_tile(self.motionnumber, put_input)
+                        self.bufferquanlity_list[index_buffer] -= 1
+                    break
+                        
     def Camera_orderchecked_tile(self):
+
         while self.Pc_system:
-            if not self.Pc_checked  and not len(self.name_checked)==0 and self.Robot_sensor1:
-                self.removelock=True
-
-                self.motionangle = 1 if self.angle_checked[0]== 1 else 0
-                self.motionname = self.name_checked[0]
-                self.motionnumber = self.checknumberlist[0]
-
-                print('移除前:',self.name_checked, self.angle_checked, self.checknumberlist)
-                self.name_checked.pop(0)
-                self.angle_checked.pop(0)
-                self.checknumberlist.pop(0)
-                break
-                
             time.sleep(0.1)
+            if not self.Pc_checked  and  ( len(self.name_checked) != 0 or len(self.buffer_order) !=0 ) and (self.Robot_sensor1 or self.checknumberlist[0] == 3):
+
+                self.removelock=True
+                self.motionnumber = self.checknumberlist[0]
+                print(f'目前動作序:{self.checknumberlist}')
+                print(f'目前buffer序:{self.buffer_order}')
+                print(f'目前比對物:{self.name_checked},{self.angle_checked}')
+                if self.motionnumber != 3:
+                    self.motionangle = 1 if self.angle_checked[0] == 1 else 0
+                    self.motionname = self.name_checked[0]
+                    self.name_checked.pop(0)
+                    self.angle_checked.pop(0)
+
+                break        
 
     def catch_tile(self,process,catch_input,state):
-        
         while self.Pc_system:
+
             case = 1
-            self.Pc_boxchecked=True
+            if self.motionnumber != 3:
+                self.Pc_boxchecked=True
             print('正確catch第%d次'%(self.count))
 
             if self.motion(process, case, catch_input, self.motionangle):
-                self.frontend_motion=5
-                self.Pc_boxchecked=False
+                self.frontend_motion = 5
+                self.Pc_boxchecked = False
                 # 鎖住相機偵測
                 # -----------------------
                 if state == 'correct':
@@ -735,13 +779,15 @@ class Yaskawa_control():
                         next_name = order_list[count + 1] if count < order_count - 1 else ''
                         websocket_object_name(order_list[count], next_name)
                 # -----------------------
-                self.removelock=False
-                # 解鎖開始偵測
-                # -----------------------
-                if state == 'correct':
-                    self.detect_count_change = True
-                    self.detect_count = count + 1
-                # -----------------------
+                if self.dectect_system:
+                    self.checknumberlist.pop(0)
+                    self.removelock = False
+                    # 解鎖開始偵測
+                    # -----------------------
+                    if state == 'correct':
+                        self.detect_count_change = True
+                        self.detect_count = count + 1
+                    # -----------------------
                 break
 
     def put_tile(self,process,put_input):
@@ -753,25 +799,26 @@ class Yaskawa_control():
             websocket_robot_state('operate')
             self.robot_count = self.count + 1
             # -----------------------
-
+            
             if self.motion(process, case, put_input, 0):
-                self.frontend_motion=6
-                if self.motionnumber == 1:
-                    self.count+=1
+                self.frontend_motion = 6
+                if self.motionnumber != 2:
+                    self.count += 1
                 break
 
     def end_tile(self):
-        if self.count==self.count_list or not self.Pc_system:
+
+        if self.count == self.count_list or not self.Pc_system:
             if not self.Pc_system:
-                self.frontend_motion=7
+                self.frontend_motion = 7
                 print('系統重置')
                 # --------------------
                 self.isFinish_queue.put(False)
                 # --------------------
             else:
-                self.frontend_motion=8
+                self.frontend_motion = 8
                 self.speed(20)
-                home_input=[1, 0, 0, 0, 0, 0, 0]
+                home_input = [1, 0, 0, 0, 0, 0, 0]
                 self.motion(1, 3, home_input, 1)
                 print('執行完畢回原點')
                 # --------------------
@@ -781,10 +828,10 @@ class Yaskawa_control():
 
         self.reset()
         time.sleep(0.1)
-        self.Pc_finish=True
-        self.Pc_system=False
+        self.Pc_finish = True
+        self.Pc_system = False
         print("Connection closed.") 
-    
+
     def motion(self, process, case, position, angle):
         packet = [process, 0, 0, 0, 0, 0, 0, 0, 0]
         packet[1] = case
@@ -792,13 +839,20 @@ class Yaskawa_control():
         self.motion_state = case
         
         if case == 1:
-            if angle == 1:
+            if angle == 1 and not self.motionnumber == 3:
                 packet[3], packet[4] = packet[4], packet[3]
                 packet[-3] += 90.0
+            if self.motionnumber == 3:
+                packet[5] = packet[5] * self.bufferquanlity
+                if self.bufferquanlity == 0:
+                    self.pause()
         
         elif case == 2:
-            if self.motionnumber==2:
-                packet[5] = packet[5] * self.bufferquanlity
+            if self.motionnumber == 2:
+                packet[5] = packet[5] * (self.bufferquanlity + 1)
+                if self.bufferquanlity == 4:
+                    self.pause()
+                print(self.bufferquanlity)
         
         print(packet)
         self.packet_dict = {'process':packet[0],'case':packet[1],'base':packet[2],'p1':packet[3],

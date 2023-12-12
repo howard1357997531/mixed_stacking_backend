@@ -373,6 +373,7 @@ def robot_test(order_count, order_list, isFinish_queue):
 
 # from .arms.Yaskawa_function import Yaskawa_control
 # from .arms.Yaskawa_function_buffer import Yaskawa_control as Yaskawa_control_buffer
+# from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
 # from .arm.kuka_function import Kuka_control
 YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
@@ -389,8 +390,8 @@ def executeRobot(request):
         isFinish_queue = Queue()
         
         '''
-        # YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
-        YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
+        YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
+        # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
 
         # demo1
@@ -400,21 +401,21 @@ def executeRobot(request):
         # thread1.join()
 
         # demo2
-        thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
-        thread1.start()
-        time.sleep(2)
-        thread2 = threading.Thread(target=YASKAWA_ROBOT.thread2_supplycheck)
-        thread2.start()
-        thread1.join(); thread2.join()
-
-        # demo3
-        # YASKAWA_ROBOT_BUFFER.dectect_open()
-        # thread1 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
+        # thread1 = threading.Thread(target=YASKAWA_ROBOT.Robot_Demo2, args=(orderId, order_list, order_count, isFinish_queue))
         # thread1.start()
         # time.sleep(2)
-        # thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.thread2_supplycheck)
+        # thread2 = threading.Thread(target=YASKAWA_ROBOT.thread2_supplycheck)
         # thread2.start()
         # thread1.join(); thread2.join()
+
+        # demo3
+        YASKAWA_ROBOT_BUFFER.dectect_open()
+        thread1 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1.start()
+        time.sleep(2)
+        thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.thread2_supplycheck)
+        thread2.start()
+        thread1.join(); thread2.join()
         '''
         # test
         global TEST_RESET, TEST_RAUSE
@@ -444,16 +445,16 @@ def robotSetting(request):
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
         ''' 
         if mode == 'pause':
-            YASKAWA_ROBOT.pause()
+            YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
-            YASKAWA_ROBOT.keepgo()
+            YASKAWA_ROBOT_BUFFER.keepgo()
         elif mode == 'speedUp' or mode == 'speedDown':
             robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
             robot_speed = 100 if robot_speed > 100 else robot_speed
             robot_speed = 70 if robot_speed >= 70 else robot_speed
-            YASKAWA_ROBOT.speed(robot_speed)
+            YASKAWA_ROBOT_BUFFER.speed(robot_speed)
         elif mode == 'reset':
-            YASKAWA_ROBOT.reset()
+            YASKAWA_ROBOT_BUFFER.reset()
         '''
         # test
         global TEST_RESET, TEST_RAUSE
@@ -563,7 +564,7 @@ def aiTraining(request):
         unique_code = order.unique_code
         
         t1 = time.time()
-        # '''
+        '''
         ai_calculate(worklist_id, unique_code)
         '''
         main_2d(worklist_id, unique_code)
@@ -571,7 +572,7 @@ def aiTraining(request):
         # '''
         t2 = time.time()
         training_time = round(t2-t1, 3)
-        # '''
+        '''
         ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
         '''
         ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
@@ -604,14 +605,39 @@ def getOrderData(request):
 @api_view(['POST'])
 def editOrder(request):
     try:
-        id = request.data.get('orderSelectData')
-        order = Order.objects.filter(id=int(id)).first()
+        data = request.data.get('orderSelectData')
+        order = Order.objects.filter(id=int(data.get("id"))).first()
         orderItem = OrderItem.objects.filter(order=order)
-        print(orderItem)
-        for i in orderItem:
-            if i.name == '#35':
-                i.quantity = 0
-                i.save()
+        print(data)
+        print(data.get('aiTraining_state'))
+        if data.get('aiTraining_state') == "no_training":
+            if order.name != data.get('name'):
+                order.name = data.get('name')
+                order.save()
+
+            for item in orderItem:
+                item.quantity = data[item.name]
+                item.save()
+
+            path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
+            with open (path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            
+            for row in rows:
+                name = row["name"].replace('外箱', '')
+                row['name'] = name
+                row['quantity'] = data[name]
+
+            with open(path, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+
+        elif data.get('aiTraining_state') == "finish_training":
+            pass
+        
         return Response('ok', status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': 'error'}, status=status.HTTP_400_BAD_REQUEST)
