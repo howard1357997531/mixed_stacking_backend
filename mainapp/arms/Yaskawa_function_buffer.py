@@ -512,6 +512,7 @@ class Yaskawa_control():
                     # 此段為偵測順序改變
                     websocket_visual_result(None, self.detect_count)
                 websocket_visual_result(Box_id, None)
+                # websocket_visual_result(Box_id, self.detect_count)
                 self.detect_count_change = False
                 self.detect_box = Box_id
                 # --------------------------------
@@ -529,7 +530,7 @@ class Yaskawa_control():
             if self.Robot_sensor3 and not self.removelock:
                 # print('開始檢測')
                 self.Pc_checked=True
-                result = self. main()
+                result = self.main()
 
                 if result[0][0] != '#0'or result[1] != '-1':                
                     while self.dectect_system and not self.Pc_finish:   
@@ -576,6 +577,7 @@ class Yaskawa_control():
                 self.Pc_checked=False
 
             # ------------------------------
+            # 當沒鎖相機然後sensor沒啟動時觸發，會回傳上次已儲存detect_box給前端
             else:
                 if self.detect_count_change:
                     self.detect_box = self.detect_box[1:]

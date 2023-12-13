@@ -56,13 +56,15 @@ def websocket_object_name(name, nextName):
         }
     )
 
-def websocket_visual_result(visual_result, count):
+def websocket_visual_result(visual_result, count, buffer_order=None, check_numberlist=None):
     return async_to_sync(channel_layer.group_send)(
         'count_room',
         {
             'type': 'visual_result_change',
             'visual_result': visual_result,
-            'visual_count': count
+            'visual_count': count,
+            'buffer_order': buffer_order,
+            'check_numberlist': check_numberlist
         }
     )
 
@@ -373,7 +375,7 @@ def robot_test(order_count, order_list, isFinish_queue):
 
 # from .arms.Yaskawa_function import Yaskawa_control
 # from .arms.Yaskawa_function_buffer import Yaskawa_control as Yaskawa_control_buffer
-# from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
+from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
 # from .arm.kuka_function import Kuka_control
 YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
@@ -389,7 +391,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        '''
+        # '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -443,7 +445,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        ''' 
+        # ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':

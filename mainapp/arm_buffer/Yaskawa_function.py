@@ -32,7 +32,6 @@ config =  {
             "depthMode":"WFOV",
             "algin":"color"
         }
-        
 
 #camera = azuredkCamera.azureDK(config)
 try:
@@ -52,15 +51,13 @@ qr_object = qrClass(crop = crop)
 dimenssion_3D_object = Dimension_3D(crop = crop)
 
 def voting_preprocess(dst, src, key):
-
     dst[src[key]] = dst.get(src[key], 0) + 1
     return dst
-def voting(result, key_list, data_list):
-            
+
+def voting(result, key_list, data_list):            
     for key in key_list:
         for src in data_list:
             result_dict = voting_preprocess(result_dict, src, key)
-            
     return result
 
 ##########################################################################
@@ -242,7 +239,7 @@ class Yaskawa_control():
         # websocket
         self.order_count = 1
         self.robot_count = 1
-        self.detect_count_change = False
+        self.detect_count_bool = False
         self.detect_count = 1
         self.detect_box = []
         self.robot_count_bool = False
@@ -432,7 +429,6 @@ class Yaskawa_control():
 
     def main(self):
         count = 0
-    
         if not process:
             return None
         for idx_, i in enumerate(camera.getData()):	
@@ -451,10 +447,7 @@ class Yaskawa_control():
             
             #image = qr_object.reduce_glare(image)
             image = qr_object.reduce_highlights(image)         
-            
             pyzbarcount = qr_object.decode_pyzbarcount(image)
-
-
             print(dbrcount, pyzbarcount)
 
             # if dbrcount !=pyzbarcount:
@@ -465,11 +458,7 @@ class Yaskawa_control():
                 return Box_id,angle
             
             if dbrcount == pyzbarcount:
-
-                #
-                
-                image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)
-                
+                image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)             
                 end_time = time.time()
 
                 # 計算執行時間，換算成 FPS
@@ -481,26 +470,23 @@ class Yaskawa_control():
                 else:
                     qr_dict = {'box_id': '0', 'angle': '-1'}
 
-                
-                
                 box_id = qr_dict['box_id']
                 angle = qr_dict['angle']
 
                 cv2.putText(image, f"ID: {box_id}, angle: {angle}, FPS:{fps:.2f}",(50,50), cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,0,255,1))
-
                 cv2.imshow('image',image)
-
                 
                 k = cv2.waitKey(1)
             
                 Box_id = ['#' + item for item in box_id]
                 print(Box_id,angle)
                 # --------------------------------
-                if self.detect_count_change:
-                    # 此段為偵測順序改變
-                    websocket_visual_result(None, self.detect_count)
-                websocket_visual_result(Box_id, None)
-                self.detect_count_change = False
+                # if self.detect_count_bool:
+                #     # 此段為偵測順序改變
+                #     websocket_visual_result(None, self.detect_count)
+                websocket_visual_result(Box_id, self.detect_count, self.buffer_order, self.checknumberlist)
+                
+                self.detect_count_bool = False
                 self.detect_box = Box_id
                 # --------------------------------
                     
@@ -608,12 +594,13 @@ class Yaskawa_control():
 
                 self.Pc_checked = False
             # ------------------------------
+            # 當沒鎖相機然後sensor沒啟動時觸發，會回傳上次已儲存detect_box給前端
             else:
-                if self.detect_count_change:
+                if self.detect_count_bool:
                     self.detect_box = self.detect_box[1:]
                     # 此段為偵測順序改變
-                    websocket_visual_result(self.detect_box, self.detect_count)
-                self.detect_count_change = False
+                    websocket_visual_result(self.detect_box, self.detect_count, self.buffer_order, self.checknumberlist)
+                self.detect_count_bool = False
             # ------------------------------  
 
         print('檢測關閉')
@@ -625,33 +612,32 @@ class Yaskawa_control():
         while True:
             self.frontend_display = int(input())
     
-    # async def handle(self,websocket):
-    #     # try:
-    #         while not self.Pc_finish:
-
-    #             if self.frontend_motion == 0:
-    #                 await websocket.send('等待啟動')
-    #             elif self.frontend_motion == 1:
-    #                 await websocket.send('程式啟動中')
-    #             elif self.frontend_motion == 2:
-    #                 await websocket.send('初始化完畢')
-    #             elif self.frontend_motion == 3:
-    #                 await websocket.send(f'夾取第{self.count}箱')
-    #             elif self.frontend_motion == 4:
-    #                 await websocket.send(f'放置第{self.count}箱')
-    #             elif self.frontend_motion == 5:
-    #                 await websocket.send(f'夾取完畢')
-    #             elif self.frontend_motion == 6:
-    #                 await websocket.send(f'放置完畢')
-    #             elif self.frontend_motion == 7:
-    #                 await websocket.send('系統重置')
-    #             elif self.frontend_motion == 8:
-    #                 await websocket.send('執行完畢回原點')
-    #             elif self.frontend_motion == 9:
-    #                 await websocket.send('機器人暫停中')
-    #             elif self.frontend_motion == 10:
-    #                 await websocket.send('機器人繼續動作')
-    #             await asyncio.sleep(0.1)
+    async def handle(self,websocket):
+        # try:
+            while not self.Pc_finish:
+                if self.frontend_motion == 0:
+                    await websocket.send('等待啟動')
+                elif self.frontend_motion == 1:
+                    await websocket.send('程式啟動中')
+                elif self.frontend_motion == 2:
+                    await websocket.send('初始化完畢')
+                elif self.frontend_motion == 3:
+                    await websocket.send(f'夾取第{self.count}箱')
+                elif self.frontend_motion == 4:
+                    await websocket.send(f'放置第{self.count}箱')
+                elif self.frontend_motion == 5:
+                    await websocket.send(f'夾取完畢')
+                elif self.frontend_motion == 6:
+                    await websocket.send(f'放置完畢')
+                elif self.frontend_motion == 7:
+                    await websocket.send('系統重置')
+                elif self.frontend_motion == 8:
+                    await websocket.send('執行完畢回原點')
+                elif self.frontend_motion == 9:
+                    await websocket.send('機器人暫停中')
+                elif self.frontend_motion == 10:
+                    await websocket.send('機器人繼續動作')
+                await asyncio.sleep(0.1)
     ###############################前台顯示用#################################
     ###############################程式圖塊化################################# 
     def Robot_Demo(self, orderId, order_list, order_count, isFinish_queue):
@@ -697,33 +683,29 @@ class Yaskawa_control():
             time.sleep(0.1)
 
     def system_tile(self):
-
         catch_list, put_list, self.count_list = mix_pack(self.orderId)
         self.buffer_name, buffer_catch, buffer_put, self.bufferquanlity_list = buffer_11box()
-        
         # -----------------------
-        websocket_robot_state('detect')
-        # websocket_object_count(1)              
+        websocket_robot_state('detect')             
         #------------------------
-
         for catch_input, put_input in zip(catch_list, put_list):
             # -----------------------
             if self.count == 1:
                 websocket_robot_state('prepare')
                 websocket_object_count(1)              
             #------------------------
-            
             self.pallet = put_input[0]
             while self.Pc_system:# 不可刪掉
-                
                 if self.dectect_system:
                     self.Camera_orderchecked_tile()
-
+                
+                # 輸送帶到棧板
                 if self.motionnumber == 1:
                     self.catch_tile(self.motionnumber, catch_input, 'correct')
                     self.put_tile(self.motionnumber, put_input)
                     break
                 
+                # 輸送帶到buffer
                 elif self.motionnumber == 2:
                     index_buffer = self.buffer_name.index(self.motionname)
                     self.bufferquanlity = self.bufferquanlity_list[index_buffer]
@@ -731,6 +713,7 @@ class Yaskawa_control():
                     self.put_tile(self.motionnumber, buffer_put[index_buffer])
                     self.bufferquanlity_list[index_buffer] += 1
 
+                # buffer到棧板
                 elif self.motionnumber == 3:
                     if len(self.buffer_order) != 0:
                         index_buffer = self.buffer_name.index(self.buffer_order[0])
@@ -742,11 +725,9 @@ class Yaskawa_control():
                     break
                         
     def Camera_orderchecked_tile(self):
-
         while self.Pc_system:
             time.sleep(0.1)
-            if not self.Pc_checked  and  ( len(self.name_checked) != 0 or len(self.buffer_order) !=0 ) and (self.Robot_sensor1 or self.checknumberlist[0] == 3):
-
+            if not self.Pc_checked and ( len(self.name_checked) != 0 or len(self.buffer_order) !=0 ) and (self.Robot_sensor1 or self.checknumberlist[0] == 3):
                 self.removelock=True
                 self.motionnumber = self.checknumberlist[0]
                 print(f'目前動作序:{self.checknumberlist}')
@@ -757,12 +738,10 @@ class Yaskawa_control():
                     self.motionname = self.name_checked[0]
                     self.name_checked.pop(0)
                     self.angle_checked.pop(0)
-
                 break        
 
-    def catch_tile(self,process,catch_input,state):
+    def catch_tile(self,process, catch_input, state):
         while self.Pc_system:
-
             case = 1
             if self.motionnumber != 3:
                 self.Pc_boxchecked=True
@@ -771,10 +750,10 @@ class Yaskawa_control():
             if self.motion(process, case, catch_input, self.motionangle):
                 self.frontend_motion = 5
                 self.Pc_boxchecked = False
-                # 鎖住相機偵測
                 # -----------------------
+                # 鎖住相機偵測
+                count = self.count; order_list = self.order_list; order_count = self.order_count
                 if state == 'correct':
-                    count = self.count; order_list = self.order_list; order_count = self.order_count
                     if count < self.order_count:
                         next_name = order_list[count + 1] if count < order_count - 1 else ''
                         websocket_object_name(order_list[count], next_name)
@@ -782,22 +761,26 @@ class Yaskawa_control():
                 if self.dectect_system:
                     self.checknumberlist.pop(0)
                     self.removelock = False
-                    # 解鎖開始偵測
                     # -----------------------
+                    # 解鎖開始偵測
                     if state == 'correct':
-                        self.detect_count_change = True
+                        self.detect_count_bool = True
                         self.detect_count = count + 1
                     # -----------------------
                 break
 
-    def put_tile(self,process,put_input):
+    def put_tile(self, process, put_input):
         while self.Pc_system:
-            
             case = 2
             print('正確put第%d次'%(self.count))
             # -----------------------
-            websocket_robot_state('operate')
-            self.robot_count = self.count + 1
+            if process in [1, 3]:
+                websocket_robot_state('operate')
+                self.robot_count_bool = True
+                self.robot_count = self.count + 1
+            else:
+                websocket_robot_state('buffer')
+                self.robot_count_bool = False
             # -----------------------
             
             if self.motion(process, case, put_input, 0):
@@ -807,7 +790,6 @@ class Yaskawa_control():
                 break
 
     def end_tile(self):
-
         if self.count == self.count_list or not self.Pc_system:
             if not self.Pc_system:
                 self.frontend_motion = 7
@@ -825,7 +807,6 @@ class Yaskawa_control():
                 self.isFinish_queue.put(True)
                 # --------------------
                 
-
         self.reset()
         time.sleep(0.1)
         self.Pc_finish = True
@@ -894,6 +875,7 @@ class Yaskawa_control():
                             if not self.Robot_motion:
                                 print('Robot action finish')
                                 # ----------------------------
+                                # 手臂完成動作後才會傳ws到前台
                                 if self.robot_count <= self.order_count:
                                     websocket_robot_state('prepare')
                                     if self.robot_count_bool:

@@ -41,6 +41,8 @@ class RobotControlConsumers(AsyncJsonWebsocketConsumer):
         await self.send_json({
             'visual_result': event['visual_result'],
             'visual_count': event['visual_count'],
+            'buffer_order': event['buffer_order'],
+            'check_numberlist': event['check_numberlist'],
         })
     
 
