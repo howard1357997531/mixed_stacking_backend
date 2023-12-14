@@ -163,18 +163,33 @@ def createWorkOrder(request):
     
     csv_data = [
         ["box_id", "name", "width", "height", "depth", "quantity"],
-        [1, "#7A", 35, 26, 20, data.get("7A")],
-        [2, "#9", 43, 32, 23, data.get("9")],
-        [3, "#16A", 35, 26, 16, data.get("16A")],
-        [4, "#18A", 35, 26, 18, data.get("18A")],
-        [5, "#13", 56, 25, 14, data.get("13")],
-        [6, "#20", 53, 34, 13, data.get("20")],
-        [7, "#22", 45, 26, 18, data.get("22")],
-        [8, "#26", 72, 25, 20, data.get("26")],
-        [9, "#29", 65, 25, 18, data.get("29")],
-        [10, "#33", 44, 21, 18, data.get("33")],
-        [11, "#35", 102, 46, 18, data.get("35")],
+        [1, "#7A", 70, 52, 40, data.get("7A")],
+        [2, "#9", 86, 64, 46, data.get("9")],
+        [3, "#16A", 70, 52, 32, data.get("16A")],
+        [4, "#18A", 70, 52, 36, data.get("18A")],
+        [5, "#13", 112, 50, 28, data.get("13")],
+        [6, "#20", 106, 68, 26, data.get("20")],
+        [7, "#22", 90, 52, 36, data.get("22")],
+        [8, "#26", 144, 50, 40, data.get("26")],
+        [9, "#29", 130, 50, 36, data.get("29")],
+        [10, "#33", 88, 42, 36, data.get("33")],
+        [11, "#35", 204, 92, 36, data.get("35")],
     ]
+
+    # csv_data = [
+    #     ["box_id", "name", "width", "height", "depth", "quantity"],
+    #     [1, "#7A", 35, 26, 20, data.get("7A")],
+    #     [2, "#9", 43, 32, 23, data.get("9")],
+    #     [3, "#16A", 35, 26, 16, data.get("16A")],
+    #     [4, "#18A", 35, 26, 18, data.get("18A")],
+    #     [5, "#13", 56, 25, 14, data.get("13")],
+    #     [6, "#20", 53, 34, 13, data.get("20")],
+    #     [7, "#22", 45, 26, 18, data.get("22")],
+    #     [8, "#26", 72, 25, 20, data.get("26")],
+    #     [9, "#29", 65, 25, 18, data.get("29")],
+    #     [10, "#33", 44, 21, 18, data.get("33")],
+    #     [11, "#35", 102, 46, 18, data.get("35")],
+    # ]
 
     unique_code = uuid.uuid4().hex
     unique_code_exist = Order.objects.filter(unique_code=unique_code)
@@ -412,10 +427,10 @@ def executeRobot(request):
 
         # demo3
         YASKAWA_ROBOT_BUFFER.dectect_open()
-        thread1 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
+        thread1 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.thread2_supplycheck)
         thread1.start()
         time.sleep(2)
-        thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.thread2_supplycheck)
+        thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
         thread2.start()
         thread1.join(); thread2.join()
         '''

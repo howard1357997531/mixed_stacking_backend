@@ -311,7 +311,7 @@ class Yaskawa_control():
                 self.Robot_sensor2 = bool(int(signal_binary[-10])) 
                 self.Robot_sensor3 = bool(int(signal_binary[-11]))
                 I=I+1
-                # print(I)
+                print(I)
                 await asyncio.sleep(0)
             else:
                 print('fail')
@@ -506,93 +506,95 @@ class Yaskawa_control():
             if self.Robot_sensor3 and not self.removelock:
                 print('開始檢測')
                 self.Pc_checked = True
-                result = self. main()
+                result = self.main()
+                if result:
+                    if result[0][0] != '#0'or result[1] != '-1': 
 
-                if result[0][0] != '#0'or result[1] != '-1': 
+                        while self.dectect_system and not self.Pc_finish:  
 
-                    while self.dectect_system and not self.Pc_finish:  
+                            time.sleep(0.1) 
+                            Box_ID, Box_angle  = result[0][:], result[1][:]
+                            
+                            for item1, item2 in zip(self.name_checked,self.angle_checked):
+                                if item1 in Box_ID and item2 in Box_angle:
+                                    Box_ID.remove(item1)
+                                    Box_angle.remove(item2)
+                                    time.sleep(0.1)
 
-                        time.sleep(0.1) 
-                        Box_ID, Box_angle  = result[0][:], result[1][:]
-                        
-                        for item1, item2 in zip(self.name_checked,self.angle_checked):
-                            if item1 in Box_ID and item2 in Box_angle:
-                                Box_ID.remove(item1)
-                                Box_angle.remove(item2)
-                                time.sleep(0.1)
-
-                        if self.name_list and self.checked_quanlity[self.buffer_name.index(self.name_list[0])] > 0:
-                            print(f'buffer 區有{self.name_list[0]}')
-                            self.checknumber = 3
-                            self.checknumberlist.append(self.checknumber)
-                            self.checked_quanlity[self.buffer_name.index(self.name_list[0])] -= 1
-                            self.buffer_order.append(self.name_list.pop(0))
-                            self.frontend_boxnumber += 1
-                        
-                        if self.checknumberlist and self.checknumberlist[-1] == 3:
-                            index_ch = len(self.checknumberlist) - 1
-                            while index_ch >= 0:
-                                if not self.checknumberlist[index_ch] == 3:
-                                    break
-                                index_ch -= 1
-                            recheck_numberlist = self.checknumberlist[index_ch+1:]
-                            rebuffer_order = self.buffer_order[-len(recheck_numberlist):]
-
-                            if len(Box_ID) != 0 and Box_ID[0] in rebuffer_order:
-                                print(f'{Box_ID[0]}跟buffer 區重複了')
-                                index_recheck = rebuffer_order.index(Box_ID[0]) 
-                                recheck_numberlist[index_recheck] = 1  
-                                self.checknumberlist[-len(recheck_numberlist):] = recheck_numberlist
-                                rebuffer_order.remove(Box_ID[0])
-                                self.buffer_order[-len(recheck_numberlist):] = rebuffer_order
-                                self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
-                                self.name_checked.append(Box_ID[0])
-                                self.angle_checked.append(Box_angle[0])
-
-                                ######回傳視覺組比對後順序#####
-                                self.name_all.append(Box_ID[0])
-                                self.angle_all.append(Box_angle[0])
-                                ######回傳視覺組比對後順序#####
-                                break
-                                
-                        if len(Box_ID) != 0 and self.name_list:
-                                
-                            if self.name_list[0] == Box_ID[0]:
-                                print(f'{self.name_list[0]}比對正確')
-                                self.checknumber = 1
-                                self.name_checked.append(self.name_list.pop(0))
-                                self.angle_checked.append(Box_angle[0])
-                                self.checknumberlist.append(self.checknumber)   
-                                self.frontend_boxnumber += 1
-
-                                ######回傳視覺組比對後順序#####
-                                self.name_all.append(Box_ID[0])
-                                self.angle_all.append(Box_angle[0])
-                                ######回傳視覺組比對後順序#####
-                                    
-                            else:
-                                print(f'{Box_ID[0]}與{self.name_list[0]}不符')
-                                self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
-                                self.checknumber = 2
-                                self.name_checked.append(Box_ID[0])
-                                self.angle_checked.append(Box_angle[0])
+                            while self.name_list and self.checked_quanlity[self.buffer_name.index(self.name_list[0])] > 0:
+                                time.sleep(0.03)
+                                print(f'buffer 區有{self.name_list[0]}')
+                                self.checknumber = 3
                                 self.checknumberlist.append(self.checknumber)
+                                self.checked_quanlity[self.buffer_name.index(self.name_list[0])] -= 1
+                                self.buffer_order.append(self.name_list.pop(0))
+                                self.frontend_boxnumber += 1
+                            
+                            if self.checknumberlist and self.checknumberlist[-1] == 3:
+                                index_ch = len(self.checknumberlist) - 1
+                                while index_ch >= 0:
+                                    time.sleep(0.03)
+                                    if not self.checknumberlist[index_ch] == 3:
+                                        break
+                                    index_ch -= 1
+                                recheck_numberlist = self.checknumberlist[index_ch+1:]
+                                rebuffer_order = self.buffer_order[-len(recheck_numberlist):]
 
-                                ######回傳視覺組比對後順序#####
-                                self.name_all.append(Box_ID[0])
-                                self.angle_all.append(Box_angle[0])
-                                ######回傳視覺組比對後順序#####
+                                if len(Box_ID) != 0 and Box_ID[0] in rebuffer_order:
+                                    print(f'{Box_ID[0]}跟buffer 區重複了')
+                                    index_recheck = rebuffer_order.index(Box_ID[0]) 
+                                    recheck_numberlist[index_recheck] = 1  
+                                    self.checknumberlist[-len(recheck_numberlist):] = recheck_numberlist
+                                    rebuffer_order.remove(Box_ID[0])
+                                    self.buffer_order[-len(recheck_numberlist):] = rebuffer_order
+                                    self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
+                                    self.name_checked.append(Box_ID[0])
+                                    self.angle_checked.append(Box_angle[0])
+
+                                    ######回傳視覺組比對後順序#####
+                                    self.name_all.append(Box_ID[0])
+                                    self.angle_all.append(Box_angle[0])
+                                    ######回傳視覺組比對後順序#####
+                                    break
+                                    
+                            if len(Box_ID) != 0 and self.name_list:
+                                    
+                                if self.name_list[0] == Box_ID[0]:
+                                    print(f'{self.name_list[0]}比對正確')
+                                    self.checknumber = 1
+                                    self.name_checked.append(self.name_list.pop(0))
+                                    self.angle_checked.append(Box_angle[0])
+                                    self.checknumberlist.append(self.checknumber)   
+                                    self.frontend_boxnumber += 1
+
+                                    ######回傳視覺組比對後順序#####
+                                    self.name_all.append(Box_ID[0])
+                                    self.angle_all.append(Box_angle[0])
+                                    ######回傳視覺組比對後順序#####
+                                        
+                                else:
+                                    print(f'{Box_ID[0]}與{self.name_list[0]}不符')
+                                    self.checked_quanlity[self.buffer_name.index(Box_ID[0])] += 1
+                                    self.checknumber = 2
+                                    self.name_checked.append(Box_ID[0])
+                                    self.angle_checked.append(Box_angle[0])
+                                    self.checknumberlist.append(self.checknumber)
+
+                                    ######回傳視覺組比對後順序#####
+                                    self.name_all.append(Box_ID[0])
+                                    self.angle_all.append(Box_angle[0])
+                                    ######回傳視覺組比對後順序#####
+                                    break
+                            
+                            else:
                                 break
-                        
-                        else:
-                            break
 
-                    self.frontend_display = 1
-                    checked_dict= {'Box_id': self.name_all ,'angle': self.angle_all}
-                    file = pd.DataFrame(checked_dict)
-                    file.to_csv('checked_file.csv', index = False)
+                        self.frontend_display = 1
+                        checked_dict= {'Box_id': self.name_all ,'angle': self.angle_all}
+                        file = pd.DataFrame(checked_dict)
+                        file.to_csv('checked_file.csv', index = False)
 
-                self.Pc_checked = False
+                    self.Pc_checked = False
             # ------------------------------
             # 當沒鎖相機然後sensor沒啟動時觸發，會回傳上次已儲存detect_box給前端
             else:
@@ -775,7 +777,10 @@ class Yaskawa_control():
             print('正確put第%d次'%(self.count))
             # -----------------------
             if process in [1, 3]:
-                websocket_robot_state('operate')
+                if process == 1:
+                    websocket_robot_state('operate')
+                else:
+                    websocket_robot_state('buffer_to_main')
                 self.robot_count_bool = True
                 self.robot_count = self.count + 1
             else:
