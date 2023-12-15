@@ -243,6 +243,8 @@ class Yaskawa_control():
         self.detect_count = 1
         self.detect_box = []
         self.robot_count_bool = False
+        self.robot_to_buffer = False
+        self.org_box = []
 
     ###############################I/O通訊用#################################   
     async def send_position(self):
@@ -311,7 +313,7 @@ class Yaskawa_control():
                 self.Robot_sensor2 = bool(int(signal_binary[-10])) 
                 self.Robot_sensor3 = bool(int(signal_binary[-11]))
                 I=I+1
-                print(I)
+                # print(I)
                 await asyncio.sleep(0)
             else:
                 print('fail')
@@ -488,6 +490,7 @@ class Yaskawa_control():
                 
                 self.detect_count_bool = False
                 self.detect_box = Box_id
+                self.org_box = Box_id
                 # --------------------------------
                     
                 if k == ord('q'):
@@ -522,7 +525,7 @@ class Yaskawa_control():
                                     time.sleep(0.1)
 
                             while self.name_list and self.checked_quanlity[self.buffer_name.index(self.name_list[0])] > 0:
-                                time.sleep(0.03)
+                                time.sleep(0.1)
                                 print(f'buffer 區有{self.name_list[0]}')
                                 self.checknumber = 3
                                 self.checknumberlist.append(self.checknumber)
@@ -533,7 +536,7 @@ class Yaskawa_control():
                             if self.checknumberlist and self.checknumberlist[-1] == 3:
                                 index_ch = len(self.checknumberlist) - 1
                                 while index_ch >= 0:
-                                    time.sleep(0.03)
+                                    time.sleep(0.1)
                                     if not self.checknumberlist[index_ch] == 3:
                                         break
                                     index_ch -= 1
@@ -598,11 +601,12 @@ class Yaskawa_control():
             # ------------------------------
             # 當沒鎖相機然後sensor沒啟動時觸發，會回傳上次已儲存detect_box給前端
             else:
-                if self.detect_count_bool:
-                    self.detect_box = self.detect_box[1:]
-                    # 此段為偵測順序改變
-                    websocket_visual_result(self.detect_box, self.detect_count, self.buffer_order, self.checknumberlist)
-                self.detect_count_bool = False
+                # if self.robot_to_buffer:
+                #     self.detect_box = self.detect_box[1:]
+                #     # 此段為偵測順序改變
+                #     websocket_visual_result(self.detect_box, self.detect_count, self.buffer_order, self.checknumberlist)
+                websocket_visual_result(self.detect_box, self.detect_count, self.buffer_order, self.checknumberlist)
+                self.robot_to_buffer = False
             # ------------------------------  
 
         print('檢測關閉')
@@ -754,6 +758,11 @@ class Yaskawa_control():
                 self.Pc_boxchecked = False
                 # -----------------------
                 # 鎖住相機偵測
+                if process != 3:
+                    self.detect_box = self.detect_box[1:]
+                # 此段為偵測順序改變
+                websocket_visual_result(self.detect_box, self.detect_count, self.buffer_order, self.checknumberlist)
+                # -----------------------
                 count = self.count; order_list = self.order_list; order_count = self.order_count
                 if state == 'correct':
                     if count < self.order_count:
@@ -786,6 +795,7 @@ class Yaskawa_control():
             else:
                 websocket_robot_state('buffer')
                 self.robot_count_bool = False
+                self.robot_to_buffer = True
             # -----------------------
             
             if self.motion(process, case, put_input, 0):
@@ -860,18 +870,18 @@ class Yaskawa_control():
         print('send command')
 
         while self.Pc_system:
-            time.sleep(0.1)
+            time.sleep(0.05)
             if self.Robot_received:
                 print('send command recieved')
             
                 while self.Pc_system:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                     if self.Robot_motion:
                         self.Pc_send = False
                         print('Robot recieve then in action')
 
                         while self.Pc_system:
-                            time.sleep(0.1)
+                            time.sleep(0.05)
                             if self.Robot_action:
                                 if self.motion_state == 1:
                                     self.frontend_motion = 3
