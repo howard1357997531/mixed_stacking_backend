@@ -497,7 +497,7 @@ class Yaskawa_control():
                     break
                 return Box_id,angle
 
-            time.sleep(0.1)       
+            time.sleep(0.05)       
 
     def thread2_supplycheck(self):
         self.frontend_display=2
@@ -515,7 +515,7 @@ class Yaskawa_control():
 
                         while self.dectect_system and not self.Pc_finish:  
 
-                            time.sleep(0.1) 
+                            time.sleep(0.05) 
                             Box_ID, Box_angle  = result[0][:], result[1][:]
                             
                             for item1, item2 in zip(self.name_checked,self.angle_checked):
@@ -525,7 +525,7 @@ class Yaskawa_control():
                                     time.sleep(0.1)
 
                             while self.name_list and self.checked_quanlity[self.buffer_name.index(self.name_list[0])] > 0:
-                                time.sleep(0.1)
+                                time.sleep(0.05)
                                 print(f'buffer 區有{self.name_list[0]}')
                                 self.checknumber = 3
                                 self.checknumberlist.append(self.checknumber)
@@ -536,7 +536,7 @@ class Yaskawa_control():
                             if self.checknumberlist and self.checknumberlist[-1] == 3:
                                 index_ch = len(self.checknumberlist) - 1
                                 while index_ch >= 0:
-                                    time.sleep(0.1)
+                                    time.sleep(0.05)
                                     if not self.checknumberlist[index_ch] == 3:
                                         break
                                     index_ch -= 1

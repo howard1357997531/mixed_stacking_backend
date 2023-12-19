@@ -390,7 +390,7 @@ def robot_test(order_count, order_list, isFinish_queue):
 
 # from .arms.Yaskawa_function import Yaskawa_control
 # from .arms.Yaskawa_function_buffer import Yaskawa_control as Yaskawa_control_buffer
-from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
+# from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
 # from .arm.kuka_function import Kuka_control
 YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
@@ -406,7 +406,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        # '''
+        '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -460,7 +460,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        # ''' 
+        ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
@@ -569,40 +569,35 @@ def uploadCsv(request):
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        worklist_id = request.data.get("orderId")
-        order = Order.objects.filter(id=int(worklist_id)).first()
-        if request.data.get('mode') == 'error':
-            order.aiTraining_state = "no_training"
-            order.save()
-            return Response('ok', status=status.HTTP_200_OK)
+        # worklist_id = request.data.get("orderId")
+        # order = Order.objects.filter(id=int(worklist_id)).first()        
+        # order.aiTraining_state = "is_training"
+        # order.save()
+        # unique_code = order.unique_code
         
-        order.aiTraining_state = "is_training"
-        order.save()
-        unique_code = order.unique_code
-        
-        t1 = time.time()
-        '''
-        ai_calculate(worklist_id, unique_code)
-        '''
-        main_2d(worklist_id, unique_code)
-        main_3d(worklist_id, unique_code)
+        # t1 = time.time()
         # '''
-        t2 = time.time()
-        training_time = round(t2-t1, 3)
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # ai_calculate(worklist_id, unique_code)
         # '''
-        ai_df = pd.read_csv(ai_csvfile_path)
-        ai_list = ai_df['matched_box_name'].tolist()
-        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        # main_2d(worklist_id, unique_code)
+        # main_3d(worklist_id, unique_code)
+        # # '''
+        # t2 = time.time()
+        # training_time = round(t2-t1, 3)
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # # '''
+        # ai_df = pd.read_csv(ai_csvfile_path)
+        # ai_list = ai_df['matched_box_name'].tolist()
+        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
         
-        order.aiTraining_order = aiResult_str
-        order.aiTraining_state = "finish_training"
-        order.save()
-
-        return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
+        # order.aiTraining_order = aiResult_str
+        # order.aiTraining_state = "finish_training"
+        # order.save()
+        time.sleep(4)
+        return Response({"aiResult_str": "1,2,3,4,5"}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 
