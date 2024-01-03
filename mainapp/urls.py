@@ -12,6 +12,7 @@ urlpatterns = [
     path('uploadCsv/', views.uploadCsv, name="uploadCsv"),
     path('aiTraining/', views.aiTraining, name="aiTraining"),
     path('getOrderData/', views.getOrderData, name="getOrderData"),
+    path('filterOrderData/', views.filterOrderData, name="filterOrderData"),
     path('editOrder/', views.editOrder, name="editOrder"),
     path('deleteOrder/', views.deleteOrder, name="deleteOrder"),
     path('executeRobot/', views.executeRobot, name="executeRobot"),

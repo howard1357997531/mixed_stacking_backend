@@ -44,6 +44,11 @@ class RobotControlConsumers(AsyncJsonWebsocketConsumer):
             'buffer_order': event['buffer_order'],
             'check_numberlist': event['check_numberlist'],
         })
+
+    async def visual_buffer_change(self, event):
+        await self.send_json({
+            'bufferquanlity': event['bufferquanlity'],
+        })
     
 
 

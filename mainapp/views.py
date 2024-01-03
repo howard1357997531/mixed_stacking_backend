@@ -64,7 +64,16 @@ def websocket_visual_result(visual_result, count, buffer_order=None, check_numbe
             'visual_result': visual_result,
             'visual_count': count,
             'buffer_order': buffer_order,
-            'check_numberlist': check_numberlist
+            'check_numberlist': check_numberlist,
+        }
+    )
+
+def websocket_buffer(bufferquanlity):
+    return async_to_sync(channel_layer.group_send)(
+        'count_room',
+        {   
+            'type': 'visual_buffer_change',
+            "bufferquanlity": bufferquanlity
         }
     )
 
@@ -390,7 +399,7 @@ def robot_test(order_count, order_list, isFinish_queue):
 
 # from .arms.Yaskawa_function import Yaskawa_control
 # from .arms.Yaskawa_function_buffer import Yaskawa_control as Yaskawa_control_buffer
-# from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
+from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buffer
 # from .arm.kuka_function import Kuka_control
 YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
@@ -406,7 +415,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        '''
+        # '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -460,7 +469,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        ''' 
+        # ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
@@ -571,8 +580,8 @@ def aiTraining(request):
     try:
         # worklist_id = request.data.get("orderId")
         # order = Order.objects.filter(id=int(worklist_id)).first()        
-        # order.aiTraining_state = "is_training"
-        # order.save()
+        # # order.aiTraining_state = "is_training"
+        # # order.save()
         # unique_code = order.unique_code
         
         # t1 = time.time()
@@ -596,15 +605,15 @@ def aiTraining(request):
         # order.aiTraining_order = aiResult_str
         # order.aiTraining_state = "finish_training"
         # order.save()
-        time.sleep(4)
-        return Response({"aiResult_str": "1,2,3,4,5"}, status=status.HTTP_200_OK)
+        time.sleep(5)
+        return Response({"aiResult_str": '1,2,3,4,5'}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 def getOrderData(request):
     try:
-        # time.sleep(5)
+        time.sleep(1)
         # order = Order.objects.get(id=123456).order_by('-id')
         order = Order.objects.all().order_by('-id')
         serializer = OrderSerializer(order, many=True)
@@ -613,6 +622,25 @@ def getOrderData(request):
     except:
         error_msg = 'not found orderlist'
         return Response({'error_msg': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def filterOrderData(request):
+    try:
+        time.sleep(1)
+        state = request.GET.get('state')
+        value = request.GET.get('value')
+        if state == 'name':
+            order = Order.objects.filter(name__icontains=value).order_by('-id')
+            
+        elif state == 'date':
+            date = value.split('-')
+            order = Order.objects.filter(createdAt__year=int(date[0]), 
+                createdAt__month=int(date[1]), createdAt__day=int(date[2])).order_by('-id')
+        serializer = OrderSerializer(order, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except:
+        return Response('error', status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def editOrder(request):

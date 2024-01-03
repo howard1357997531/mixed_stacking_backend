@@ -98,6 +98,7 @@ class Visualize3DBoxes:
         """Maps a layer number to a unique color."""
         return self.colormap(layer % 10)
 
+    # box_data = pd.read_csv('box_positions.csv')
     def visualize_boxes(self, box_data, container_data, result_folder, csv_base_name, normalize_colors=False, layer_color=False): 
         """Visualizes boxes in a 3D plot and saves images and GIFs."""
         ax, fig = None, None

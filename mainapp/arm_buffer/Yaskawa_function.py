@@ -15,7 +15,7 @@ import threading
 # ------------------------------
 # web_socket
 from mainapp.views import (websocket_robot_state, websocket_object_count, 
-    websocket_object_name, websocket_visual_result)
+    websocket_object_name, websocket_visual_result, websocket_buffer)
 from django.conf import settings
 import os
 # ------------------------------
@@ -718,6 +718,7 @@ class Yaskawa_control():
                     self.catch_tile(self.motionnumber, buffer_catch[index_buffer], 'error')
                     self.put_tile(self.motionnumber, buffer_put[index_buffer])
                     self.bufferquanlity_list[index_buffer] += 1
+                    websocket_buffer(self.bufferquanlity_list)
 
                 # buffer到棧板
                 elif self.motionnumber == 3:
@@ -728,6 +729,7 @@ class Yaskawa_control():
                         self.buffer_order.remove(self.buffer_order[0])
                         self.put_tile(self.motionnumber, put_input)
                         self.bufferquanlity_list[index_buffer] -= 1
+                        websocket_buffer(self.bufferquanlity_list)
                     break
                         
     def Camera_orderchecked_tile(self):
@@ -778,6 +780,8 @@ class Yaskawa_control():
                         self.detect_count_bool = True
                         self.detect_count = count + 1
                     # -----------------------
+                    # print('bufferquanlity:', self.bufferquanlity_list)
+                    # websocket_visual_result()
                 break
 
     def put_tile(self, process, put_input):

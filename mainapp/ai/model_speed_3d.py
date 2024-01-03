@@ -76,7 +76,7 @@ class Bin():
                 box_area = (x4 - x3) * (y4 - y3)
 
                 # Calculate the additional area to consider (18% more than the box area)
-                extra_area = 0.14 * box_area
+                extra_area = 0.11 * box_area
 
                 # Calculate the additional length to add to each side of the box in the XY plane
                 extra_length = np.sqrt(extra_area) / 2  # Divide by 2 to add half the extra length to each side
