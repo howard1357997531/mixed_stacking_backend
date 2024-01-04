@@ -742,6 +742,7 @@ def createMultipleOrder(request):
             "name": inputText,
             "orderSelectId_str": ','.join(orderSelectData),
             "is_today_latest": True,
+            "modifiedAt": datetime.now().strftime('%Y/%m/%d  %H:%M'),
             "createdAt": datetime.now().strftime('%Y/%m/%d  %H:%M'),
             "multipleOrder": multipleOrderList
         }
