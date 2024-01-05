@@ -650,33 +650,33 @@ def editOrder(request):
         orderItem = OrderItem.objects.filter(order=order)
         print(data)
         print(data.get('aiTraining_state'))
-        if data.get('aiTraining_state') == "no_training":
-            if order.name != data.get('name'):
-                order.name = data.get('name')
-                order.save()
+        # if data.get('aiTraining_state') == "no_training":
+        #     if order.name != data.get('name'):
+        #         order.name = data.get('name')
+        #         order.save()
 
-            for item in orderItem:
-                item.quantity = data[item.name]
-                item.save()
+        #     for item in orderItem:
+        #         item.quantity = data[item.name]
+        #         item.save()
 
-            path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
-            with open (path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                rows = list(reader)
+        #     path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
+        #     with open (path, 'r', encoding='utf-8') as f:
+        #         reader = csv.DictReader(f)
+        #         rows = list(reader)
             
-            for row in rows:
-                name = row["name"].replace('外箱', '')
-                row['name'] = name
-                row['quantity'] = data[name]
+        #     for row in rows:
+        #         name = row["name"].replace('外箱', '')
+        #         row['name'] = name
+        #         row['quantity'] = data[name]
 
-            with open(path, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(rows)
+        #     with open(path, 'w', newline='', encoding='utf-8') as f:
+        #         fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
+        #         writer = csv.DictWriter(f, fieldnames=fieldnames)
+        #         writer.writeheader()
+        #         writer.writerows(rows)
 
-        elif data.get('aiTraining_state') == "finish_training":
-            pass
+        # elif data.get('aiTraining_state') == "finish_training":
+        #     pass
         
         return Response('ok', status=status.HTTP_200_OK)
     except:
