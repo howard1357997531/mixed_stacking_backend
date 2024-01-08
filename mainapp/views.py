@@ -645,40 +645,98 @@ def filterOrderData(request):
 @api_view(['POST'])
 def editOrder(request):
     try:
-        data = request.data.get('orderSelectData')
+        data = request.data.get('orderData')
         order = Order.objects.filter(id=int(data.get("id"))).first()
         orderItem = OrderItem.objects.filter(order=order)
+        aiTraining_state = data.get('aiTraining_state')
+        count_change = data.get('count_change')
         print(data)
-        print(data.get('aiTraining_state'))
-        # if data.get('aiTraining_state') == "no_training":
-        #     if order.name != data.get('name'):
-        #         order.name = data.get('name')
-        #         order.save()
 
-        #     for item in orderItem:
-        #         item.quantity = data[item.name]
-        #         item.save()
+        if order.name != data.get('name'):
+            order.name = data.get('name')
+            order.save()
 
-        #     path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
-        #     with open (path, 'r', encoding='utf-8') as f:
-        #         reader = csv.DictReader(f)
-        #         rows = list(reader)
+        if aiTraining_state == "no_training":
+            if count_change:
+                for item in orderItem:
+                    item.quantity = data[item.name]
+                    item.save()
+
+                path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
+                with open (path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    rows = list(reader)
+                
+                for row in rows:
+                    name = row["name"].replace('外箱', '')
+                    row['name'] = name
+                    row['quantity'] = data[name]
+
+                with open(path, 'w', newline='', encoding='utf-8') as f:
+                    fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+
+        elif aiTraining_state == "finish_training":
+            csv_data = [
+                ["box_id", "name", "width", "height", "depth", "quantity"],
+                [1, "#7A", 70, 52, 40, data.get("#7A")],
+                [2, "#9", 86, 64, 46, data.get("#9")],
+                [3, "#16A", 70, 52, 32, data.get("#16A")],
+                [4, "#18A", 70, 52, 36, data.get("#18A")],
+                [5, "#13", 112, 50, 28, data.get("#13")],
+                [6, "#20", 106, 68, 26, data.get("#20")],
+                [7, "#22", 90, 52, 36, data.get("#22")],
+                [8, "#26", 144, 50, 40, data.get("#26")],
+                [9, "#29", 130, 50, 36, data.get("#29")],
+                [10, "#33", 88, 42, 36, data.get("#33")],
+                [11, "#35", 204, 92, 36, data.get("#35")],
+            ]
+
+            unique_code = uuid.uuid4().hex
+            unique_code_exist = Order.objects.filter(unique_code=unique_code)
+            while unique_code_exist:
+                unique_code = uuid.uuid4().hex
+                unique_code_exist = Order.objects.filter(unique_code=unique_code)
+                if unique_code_exist is None:
+                    break
             
-        #     for row in rows:
-        #         name = row["name"].replace('外箱', '')
-        #         row['name'] = name
-        #         row['quantity'] = data[name]
+            today = datetime.now()
+            today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month,
+                    createdAt__day=today.day)
+            if today_order.exists():
+                today_order.update(is_today_latest=False)
 
-        #     with open(path, 'w', newline='', encoding='utf-8') as f:
-        #         fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
-        #         writer = csv.DictWriter(f, fieldnames=fieldnames)
-        #         writer.writeheader()
-        #         writer.writerows(rows)
+            csv_file_content = io.StringIO()
+            csv_writer = csv.writer(csv_file_content, lineterminator='\n')
+            for row in csv_data:
+                csv_writer.writerow(row)
 
-        # elif data.get('aiTraining_state') == "finish_training":
-        #     pass
+            order = Order.objects.create(
+                        name=f"{data.get('name')}(修改)",
+                        unique_code=unique_code)
+            
+            order.csv_file.save(f'{unique_code}.csv', ContentFile(csv_file_content.getvalue()))
+            csv_file_content.close()
+
+            for i, _csv in enumerate(csv_data, start=1):
+                if i == 1:
+                    continue
+                OrderItem.objects.create(
+                    order = order,
+                    name = _csv[1].replace('外箱', ''),
+                    width = _csv[2],
+                    height = _csv[3],
+                    depth = _csv[4],
+                    quantity = int(_csv[5])
+                )
+
+        serializer = OrderSerializer(order, many=False)
+        del data["count_change"]
+        print('asd', data)
         
-        return Response('ok', status=status.HTTP_200_OK)
+        return Response({'editData': data, 'allData': serializer.data}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': 'error'}, status=status.HTTP_400_BAD_REQUEST)
     
