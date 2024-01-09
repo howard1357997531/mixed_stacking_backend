@@ -524,6 +524,7 @@ def uploadCsv(request):
     csv_file_length = int(request.data.get('csv_file_length'))
     
     try:
+        response_data = []
         for i in range(csv_file_length):
             csv_file = request.data.get(f'csv_file{i+1}')
             csv_name = request.data.get(f'csv_file_name{i+1}').replace('.csv', '')
@@ -542,14 +543,14 @@ def uploadCsv(request):
 
             # 如果用一次固定時間，然後對所有供單最後設為is_today_latest=true會發生問題
             # 因為有可能有過00:00(隔天)問題，可能要每存一次csv都要檢查一次時間
-            today = datetime.now()
-            today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
-                        createdAt__day=today.day)
-            today_order_has_latest = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
-                        createdAt__day=today.day, is_today_latest=True)
+            # today = datetime.now()
+            # today_order = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
+            #             createdAt__day=today.day)
+            # today_order_has_latest = Order.objects.filter(createdAt__year=today.year, createdAt__month=today.month, 
+            #             createdAt__day=today.day, is_today_latest=True)
             
-            if today_order_has_latest.exists():
-                today_order.update(is_today_latest=False)
+            # if today_order_has_latest.exists():
+            #     today_order.update(is_today_latest=False)
 
             order = Order.objects.create(
                 name=csv_name,
@@ -570,43 +571,48 @@ def uploadCsv(request):
                     depth = reader[4],
                     quantity = int(reader[5])
                 )
+            
+            serializer = OrderSerializer(order, many=False)
+            res_data = serializer.data
+            res_data['is_new'] = True
+            response_data.append(res_data)
+            
+        return Response(response_data[::-1], status=200)
     except Exception as e:
-        print(f'Error: {str(e)}')
         return Response({'message': 'error'})
-    return Response({'message': 'CSV 檔案解析成功', 'data': 2}, status=200)
-
+    
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        # worklist_id = request.data.get("orderId")
-        # order = Order.objects.filter(id=int(worklist_id)).first()        
-        # # order.aiTraining_state = "is_training"
-        # # order.save()
-        # unique_code = order.unique_code
-        
-        # t1 = time.time()
-        # '''
-        # ai_calculate(worklist_id, unique_code)
-        # '''
-        # main_2d(worklist_id, unique_code)
-        # main_3d(worklist_id, unique_code)
-        # # '''
-        # t2 = time.time()
-        # training_time = round(t2-t1, 3)
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
-        # # '''
-        # ai_df = pd.read_csv(ai_csvfile_path)
-        # ai_list = ai_df['matched_box_name'].tolist()
-        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        
-        # order.aiTraining_order = aiResult_str
-        # order.aiTraining_state = "finish_training"
+        worklist_id = request.data.get("orderId")
+        order = Order.objects.filter(id=int(worklist_id)).first()        
+        # order.aiTraining_state = "is_training"
         # order.save()
-        time.sleep(5)
-        return Response({"aiResult_str": '1,2,3,4,5'}, status=status.HTTP_200_OK)
+        unique_code = order.unique_code
+        
+        t1 = time.time()
+        '''
+        ai_calculate(worklist_id, unique_code)
+        '''
+        main_2d(worklist_id, unique_code)
+        main_3d(worklist_id, unique_code)
+        # '''
+        t2 = time.time()
+        training_time = round(t2-t1, 3)
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # '''
+        ai_df = pd.read_csv(ai_csvfile_path)
+        ai_list = ai_df['matched_box_name'].tolist()
+        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        
+        order.aiTraining_order = aiResult_str
+        order.aiTraining_state = "finish_training"
+        order.save()
+        # time.sleep(5)
+        return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 
@@ -656,29 +662,28 @@ def editOrder(request):
             order.name = data.get('name')
             order.save()
 
-        if aiTraining_state == "no_training":
-            if count_change:
-                for item in orderItem:
-                    item.quantity = data[item.name]
-                    item.save()
+        if aiTraining_state == "no_training" and count_change:
+            for item in orderItem:
+                item.quantity = data[item.name]
+                item.save()
 
-                path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
-                with open (path, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    rows = list(reader)
-                
-                for row in rows:
-                    name = row["name"].replace('外箱', '')
-                    row['name'] = name
-                    row['quantity'] = data[name]
+            path = os.path.join(settings.MEDIA_ROOT, f'input_csv/{order.unique_code}.csv')
+            with open (path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            
+            for row in rows:
+                name = row["name"].replace('外箱', '')
+                row['name'] = name
+                row['quantity'] = data[name]
 
-                with open(path, 'w', newline='', encoding='utf-8') as f:
-                    fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
-                    writer = csv.DictWriter(f, fieldnames=fieldnames)
-                    writer.writeheader()
-                    writer.writerows(rows)
+            with open(path, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['box_id', 'name', 'width', 'height', 'depth', 'quantity']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
 
-        elif aiTraining_state == "finish_training":
+        elif aiTraining_state == "finish_training" and count_change:
             csv_data = [
                 ["box_id", "name", "width", "height", "depth", "quantity"],
                 [1, "#7A", 70, 52, 40, data.get("#7A")],
@@ -734,7 +739,6 @@ def editOrder(request):
 
         serializer = OrderSerializer(order, many=False)
         del data["count_change"]
-        print('asd', data)
         
         return Response({'editData': data, 'allData': serializer.data}, status=status.HTTP_200_OK)
     except:
