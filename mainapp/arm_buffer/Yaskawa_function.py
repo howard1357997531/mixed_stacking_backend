@@ -200,6 +200,7 @@ class Yaskawa_control():
         self.controllock = False
         self.commandlock = False
         self.thread0 = threading.Thread(target=self.control_response)
+        self.Pc_robot_signal = False
         ########################上位機-機器人########################
         #27010
         self.Pc_servo = 0
@@ -312,8 +313,10 @@ class Yaskawa_control():
                 self.Robot_sensor1 = bool(int(signal_binary[-9]))
                 self.Robot_sensor2 = bool(int(signal_binary[-10])) 
                 self.Robot_sensor3 = bool(int(signal_binary[-11]))
-                I=I+1
-                # print(I)
+               
+                if self.Pc_robot_signal:
+                    print(self.Robot_motion)
+                    I=I+1
                 await asyncio.sleep(0)
             else:
                 print('fail')
@@ -447,10 +450,12 @@ class Yaskawa_control():
             startdecodetime = time.time()
             dbrcount = qr_object.decode_dbrcount(image)
             
-            #image = qr_object.reduce_glare(image)
-            image = qr_object.reduce_highlights(image)         
-            pyzbarcount = qr_object.decode_pyzbarcount(image)
+            imagefilter = qr_object.reduce_glare(image)
+            #image = qr_object.reduce_highlights(image)         
+            
+            pyzbarcount = qr_object.decode_pyzbarcount(imagefilter)
             print(dbrcount, pyzbarcount)
+            
 
             # if dbrcount !=pyzbarcount:
             #     continue
@@ -460,7 +465,7 @@ class Yaskawa_control():
                 return Box_id,angle
             
             if dbrcount == pyzbarcount:
-                image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)             
+                image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(imagefilter, pc)             
                 end_time = time.time()
 
                 # 計算執行時間，換算成 FPS
@@ -869,17 +874,17 @@ class Yaskawa_control():
         return result
     
     def process_track(self):
+        self.Pc_robot_signal = True
         status = False
         self.Pc_send = True
         print('send command')
-
         while self.Pc_system:
             time.sleep(0.05)
             if self.Robot_received:
                 print('send command recieved')
-            
                 while self.Pc_system:
                     time.sleep(0.05)
+                    self.Pc_robot_signal = False
                     if self.Robot_motion:
                         self.Pc_send = False
                         print('Robot recieve then in action')

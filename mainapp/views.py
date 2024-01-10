@@ -635,14 +635,25 @@ def filterOrderData(request):
         time.sleep(1)
         state = request.GET.get('state')
         value = request.GET.get('value')
-        if state == 'name':
-            order = Order.objects.filter(name__icontains=value).order_by('-id')
-            
-        elif state == 'date':
-            date = value.split('-')
-            order = Order.objects.filter(createdAt__year=int(date[0]), 
-                createdAt__month=int(date[1]), createdAt__day=int(date[2])).order_by('-id')
-        serializer = OrderSerializer(order, many=True)
+        mode = request.GET.get('mode')
+
+        if mode == 'multipleOrder':
+            if state == 'name':
+                order = MultipleOrder.objects.filter(name__icontains=value).order_by('-id')
+            elif state == "date":
+                date = value.split('-')
+                order = MultipleOrder.objects.filter(createdAt__year=int(date[0]), 
+                    createdAt__month=int(date[1]), createdAt__day=int(date[2])).order_by('-id')
+            serializer = MultipleOrderSerilaizer(order, many=True)
+        else:
+            if state == 'name':
+                order = Order.objects.filter(name__icontains=value).order_by('-id')
+                
+            elif state == 'date':
+                date = value.split('-')
+                order = Order.objects.filter(createdAt__year=int(date[0]), 
+                    createdAt__month=int(date[1]), createdAt__day=int(date[2])).order_by('-id')
+            serializer = OrderSerializer(order, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:

@@ -80,10 +80,10 @@ def main():
         startdecodetime = time.time()
         dbrcount = qr_object.decode_dbrcount(image)
         
-        #image = qr_object.reduce_glare(image)
-        image = qr_object.reduce_highlights(image)         
+        imagefilter = qr_object.reduce_glare(image)
+        #image = qr_object.reduce_highlights(image)         
         
-        pyzbarcount = qr_object.decode_pyzbarcount(image)
+        pyzbarcount = qr_object.decode_pyzbarcount(imagefilter)
 
 
         print(dbrcount, pyzbarcount)
@@ -95,7 +95,7 @@ def main():
 
             #
             
-            image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(image, pc)
+            image_qr, boxID_list,sorted_dict_by_value_desc,angle_list = qr_object.qr_result(imagefilter, pc)
             
             end_time = time.time()
 
