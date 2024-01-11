@@ -619,7 +619,6 @@ def aiTraining(request):
 @api_view(['GET'])
 def getOrderData(request):
     try:
-        time.sleep(1)
         # order = Order.objects.get(id=123456).order_by('-id')
         order = Order.objects.all().order_by('-id')
         serializer = OrderSerializer(order, many=True)
@@ -781,12 +780,12 @@ def createMultipleOrder(request):
         orderSelectData = request.data.get('orderSelectData')
         inputText = request.data.get('inputText')
         max_id = MultipleOrder.objects.aggregate(Max("id")).get("id__max")
-        today = datetime.now()
-        today_mult_order = MultipleOrder.objects.filter(createdAt__year=today.year,
-                        createdAt__month=today.month, createdAt__day=today.day, is_today_latest=True)
+        # today = datetime.now()
+        # today_mult_order = MultipleOrder.objects.filter(createdAt__year=today.year,
+        #                 createdAt__month=today.month, createdAt__day=today.day, is_today_latest=True)
         
-        if today_mult_order.exists():
-            today_mult_order.update(is_today_latest=False)
+        # if today_mult_order.exists():
+        #     today_mult_order.update(is_today_latest=False)
 
         multiple_order = MultipleOrder.objects.create(
             name = inputText,
