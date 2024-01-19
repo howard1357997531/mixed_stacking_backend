@@ -434,6 +434,7 @@ class Yaskawa_control():
 
     def main(self):
         count = 0
+        print(1)
         if not process:
             return None
         for idx_, i in enumerate(camera.getData()):	

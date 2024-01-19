@@ -584,35 +584,35 @@ def uploadCsv(request):
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        # worklist_id = request.data.get("orderId")
-        # order = Order.objects.filter(id=int(worklist_id)).first()        
-        # # order.aiTraining_state = "is_training"
-        # # order.save()
-        # unique_code = order.unique_code
-        
-        # t1 = time.time()
-        # '''
-        # ai_calculate(worklist_id, unique_code)
-        # '''
-        # main_2d(worklist_id, unique_code)
-        # main_3d(worklist_id, unique_code)
-        # # '''
-        # t2 = time.time()
-        # training_time = round(t2-t1, 3)
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
-        # # '''
-        # ai_df = pd.read_csv(ai_csvfile_path)
-        # ai_list = ai_df['matched_box_name'].tolist()
-        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        
-        # order.aiTraining_order = aiResult_str
-        # order.aiTraining_state = "finish_training"
+        worklist_id = request.data.get("orderId")
+        order = Order.objects.filter(id=int(worklist_id)).first()        
+        # order.aiTraining_state = "is_training"
         # order.save()
-        aiResult_str = "1, 2, 3, 4, 5"
-        time.sleep(20)
+        unique_code = order.unique_code
+        
+        t1 = time.time()
+        '''
+        ai_calculate(worklist_id, unique_code)
+        '''
+        main_2d(worklist_id, unique_code)
+        main_3d(worklist_id, unique_code)
+        # '''
+        t2 = time.time()
+        training_time = round(t2-t1, 3)
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # '''
+        ai_df = pd.read_csv(ai_csvfile_path)
+        ai_list = ai_df['matched_box_name'].tolist()
+        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        
+        order.aiTraining_order = aiResult_str
+        order.aiTraining_state = "finish_training"
+        order.save()
+        # aiResult_str = "1, 2, 3, 4, 5"
+        # time.sleep(20)
         return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)

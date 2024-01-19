@@ -1,0 +1,2 @@
+bin_name,matched_box_name,conveyor_x,conveyor_y,conveyor_z,X_cog,Y_cog,Z_cog,orientation,layer,position_x,position_y,position_z,width,height,depth
+1,#7A,35.0,26.0,40,28.5,37.5,40,1.0,0,2.5,2.5,0,52,70,40
