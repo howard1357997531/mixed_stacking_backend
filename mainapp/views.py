@@ -581,6 +581,20 @@ def uploadCsv(request):
     except Exception as e:
         return Response({'message': 'error'})
     
+def parse_layer(data):
+    temp = []
+    output = []
+    count = -1
+    for i in data:
+        if i not in temp:
+            temp.append(i)
+            output.append(1)
+            count += 1
+        else:
+            output[count] += 1
+    output = ','.join(map(str, output))
+    return output
+
 @api_view(['POST'])
 def aiTraining(request):
     try:
@@ -606,9 +620,10 @@ def aiTraining(request):
         # '''
         ai_df = pd.read_csv(ai_csvfile_path)
         ai_list = ai_df['matched_box_name'].tolist()
+        ai_layer_count = ai_df['layer'].tolist()
         aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        
         order.aiTraining_order = aiResult_str
+        order.aiLayer_order = parse_layer(ai_layer_count)
         order.aiTraining_state = "finish_training"
         order.save()
         # aiResult_str = "1, 2, 3, 4, 5"
