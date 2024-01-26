@@ -622,13 +622,15 @@ def aiTraining(request):
         ai_list = ai_df['matched_box_name'].tolist()
         ai_layer_count = ai_df['layer'].tolist()
         aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        aiLayer_order = parse_layer(ai_layer_count)
         order.aiTraining_order = aiResult_str
-        order.aiLayer_order = parse_layer(ai_layer_count)
+        order.aiLayer_order = aiLayer_order
         order.aiTraining_state = "finish_training"
         order.save()
         # aiResult_str = "1, 2, 3, 4, 5"
-        # time.sleep(20)
-        return Response({"aiResult_str": aiResult_str}, status=status.HTTP_200_OK)
+        # aiLayer_order = '3,2'
+        # time.sleep(5)
+        return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 

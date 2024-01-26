@@ -1,3 +1,0 @@
-bin_name,box_name,position_x,position_y,position_z,width,height,depth,layer,color,X_cog,Y_cog,Z_cog,matched_box_name,orientation
-1,1,0,0,0,69,91,46,0,"(1.0, 0.0, 0.0, 1.0)",34.5,45.5,46,#9外箱,1.0
-1,2,69,0,0,75,57,40,0,"(0.19607843137254902, 0.19607843137254902, 1.0, 1.0)",106.5,28.5,40,#7A外箱,0.0
