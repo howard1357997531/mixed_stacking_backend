@@ -1034,3 +1034,56 @@ def deleteMultipleOrder(request):
 #     except:
 #         return Response({'mode': 'no data'})
     
+a = ["1", "1", "1", "1_insert", "1_insert", "2", "1", "2_insert"]
+a = ["1", "1", "2", "1_insert", "1_insert", "2_insert", "2", "3", "3", "3","2_insert"]
+a = ["1_insert", "1_insert", "1", "1", "2", "2_insert", "1_insert", "1_insert", "2", "3", "3", "3","2_insert"]
+
+datas = []
+insert_index = []
+data_temp = None
+insert_temp = None
+count = -1
+for i in a:
+    if i.endswith('_insert'):
+        data_temp = None
+        insert_num = i.replace('_insert', '')
+        if insert_temp:
+            if insert_num == insert_temp:
+                if '*' in datas[count]:
+                    num = datas[count].split('*')[0]
+                    times = int(datas[count].split('*')[1]) + 1
+                    datas[count] = num + '*' + str(times)
+                else:
+                    datas[count] = datas[count] + '*' + '2'
+            else:
+                count += 1
+                datas.append(insert_num)
+                insert_index.append(count)
+            insert_temp = insert_num
+        else:
+            count += 1
+            datas.append(insert_num)
+            insert_temp = insert_num
+            insert_index.append(count)
+    else:
+        insert_temp = None
+        if data_temp:
+            if i == data_temp:
+                if '*' in datas[count]:
+                    num = datas[count].split('*')[0]
+                    times = int(datas[count].split('*')[1]) + 1
+                    datas[count] = num + '*' + str(times)
+                else:
+                    datas[count] = datas[count] + '*' + '2'
+            else:
+                count += 1
+                datas.append(i)
+            data_temp = i
+        else:
+            count += 1
+            datas.append(i)
+            data_temp = i
+    print(count)
+        
+print(datas)
+print(insert_index)
