@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, ExecutingOrder
+from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, HistoryRecord, ExecutingOrder
 
 @admin.register(workOrder)
 class workOrderAdmin(admin.ModelAdmin):
@@ -23,8 +23,12 @@ class MultipleOrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'orderSelectId_str', 'is_today_latest', 'createdAt')
 
 @admin.register(MultipleOrderItem)
-class MultipleOrderAdmin(admin.ModelAdmin):
+class MultipleOrderItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'multiple_order', 'order')
+
+@admin.register(HistoryRecord)
+class HistoryRecordAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'insert_index', 'start_time', 'end_time')
 
 @admin.register(ExecutingOrder)
 class ExecutingOrderAdmin(admin.ModelAdmin):

@@ -89,6 +89,16 @@ class MultipleOrderItem(models.Model):
     def __str__(self):
         return str(self.multiple_order)
 
+class HistoryRecord(Common):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    order_id = models.CharField(max_length=255, null=True, blank=True)
+    insert_index = models.CharField(max_length=255, null=True, blank=True)
+    start_time = models.CharField(max_length=255, null=True, blank=True)
+    end_time = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return str(self.id)
+
 class ExecutingOrder(Common):
     order_id = models.CharField(max_length=255, null=True, blank=True)
     order_name = models.CharField(max_length=255, null=True, blank=True)

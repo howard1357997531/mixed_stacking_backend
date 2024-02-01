@@ -17,6 +17,7 @@ urlpatterns = [
     path('deleteOrder/', views.deleteOrder, name="deleteOrder"),
     path('executeRobot/', views.executeRobot, name="executeRobot"),
     path('robotSetting/', views.robotSetting, name="robotSetting"),
+    path('executeRobotFinish/', views.executeRobotFinish, name="executeRobotFinish"),
     path('executingOrder/', views.executingOrder, name="executingOrder"),
     path('getMultipleOrderData/', views.getMultipleOrderData, name="getMultipleOrderData"),
     path('createMultipleOrder/', views.createMultipleOrder, name="createMultipleOrder"),
