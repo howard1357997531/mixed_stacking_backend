@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerilaizer, MultipleOrderItemSerilaizer
+from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerializer, MultipleOrderItemSerializer, HistoryRecordSerializer
 from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, HistoryRecord
 from .tool import parse_execution_data
 
@@ -62,10 +62,10 @@ def websocket_visual_result(visual_result, count, buffer_order=None, check_numbe
         'count_room',
         {
             'type': 'visual_result_change',
-            'visual_result': visual_result,
-            'visual_count': count,
-            'buffer_order': buffer_order,
-            'check_numberlist': check_numberlist,
+            'visual_result': visual_result,  #當前照到的 ['#18', '#9']
+            'visual_count': count,           #正要做第幾個正確物件(+1條件為做正確物件時手臂到最高點時)
+            'buffer_order': buffer_order,    #buffer區相對位置各個物件數量 [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+            'check_numberlist': check_numberlist, # 手臂執行序 [2, 1] 1:輸送帶到堆棧、2:輸送帶到buffer、3:buffer到輸送帶
         }
     )
 
@@ -74,7 +74,7 @@ def websocket_buffer(bufferquanlity):
         'count_room',
         {   
             'type': 'visual_buffer_change',
-            "bufferquanlity": bufferquanlity
+            "bufferquanlity": bufferquanlity   # 
         }
     )
 
@@ -685,7 +685,7 @@ def filterOrderData(request):
                 date = value.split('-')
                 order = MultipleOrder.objects.filter(createdAt__year=int(date[0]), 
                     createdAt__month=int(date[1]), createdAt__day=int(date[2])).order_by('-id')
-            serializer = MultipleOrderSerilaizer(order, many=True)
+            serializer = MultipleOrderSerializer(order, many=True)
         else:
             if state == 'name':
                 order = Order.objects.filter(name__icontains=value).order_by('-id')
@@ -811,7 +811,7 @@ def deleteOrder(request):
 def getMultipleOrderData(request):
     try:
         multiple_order = MultipleOrder.objects.all().order_by('-id')
-        serializer = MultipleOrderSerilaizer(multiple_order, many=True)
+        serializer = MultipleOrderSerializer(multiple_order, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '取得多單資料失敗'}, status=status.HTTP_400_BAD_REQUEST)
@@ -875,6 +875,14 @@ def deleteMultipleOrder(request):
     except:
         return Response({'error_msg': 'fail'}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+def history_record(request):
+    try:
+        data = HistoryRecord.objects.all()
+        serializer = HistoryRecordSerializer(data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except:
+        return Response('error', status=status.HTTP_404_NOT_FOUND)
 # qrcode
 
 # @api_view(['POST'])
