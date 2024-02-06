@@ -28,7 +28,7 @@ class MultipleOrderItemAdmin(admin.ModelAdmin):
 
 @admin.register(HistoryRecord)
 class HistoryRecordAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'insert_index', 'start_time', 'end_time')
+    list_display = ('id', 'name', 'order_id', 'insert_index', 'start_time', 'end_time')
 
 @admin.register(ExecutingOrder)
 class ExecutingOrderAdmin(admin.ModelAdmin):

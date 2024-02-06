@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializer import workOrderSerializer, aiWorkOrderSerializer, OrderSerializer, MultipleOrderSerializer, MultipleOrderItemSerializer, HistoryRecordSerializer
 from .models import workOrder, aiWorkOrder, Order, OrderItem, MultipleOrder, MultipleOrderItem, HistoryRecord
-from .tool import parse_execution_data
+from .tool import parse_execution_data, RobotTest
 
 from .main_result_UI import ai_calculate
 from .ai.main_result_2d import main as main_2d
@@ -26,57 +26,58 @@ import io
 from channels.layers import get_channel_layer
 from web_socket.consumers import RobotControlConsumers
 from asgiref.sync import async_to_sync
+from .tool import websocket_robot_state, websocket_object_count, websocket_object_name, websocket_visual_result, websocket_buffer
 
-channel_layer = get_channel_layer()
+# channel_layer = get_channel_layer()
 
-def websocket_robot_state(state):
-    return async_to_sync(channel_layer.group_send)(
-        'count_room',
-        {
-            'type': 'robot_mode_change',
-            'mode': state
-        }
-    )
+# def websocket_robot_state(state):
+#     return async_to_sync(channel_layer.group_send)(
+#         'count_room',
+#         {
+#             'type': 'robot_mode_change',
+#             'mode': state
+#         }
+#     )
 
-def websocket_object_count(count):
-    return async_to_sync(channel_layer.group_send)(
-        'count_room',
-        {
-            'type': 'object_count_change',
-            'count': count
-        }
-    )
+# def websocket_object_count(count):
+#     return async_to_sync(channel_layer.group_send)(
+#         'count_room',
+#         {
+#             'type': 'object_count_change',
+#             'count': count
+#         }
+#     )
 
-def websocket_object_name(name, nextName):
-    return async_to_sync(channel_layer.group_send)(
-        'count_room',
-        {
-            'type': 'object_name_change',
-            'name': name,
-            'nextName': nextName,
-        }
-    )
+# def websocket_object_name(name, nextName):
+#     return async_to_sync(channel_layer.group_send)(
+#         'count_room',
+#         {
+#             'type': 'object_name_change',
+#             'name': name,
+#             'nextName': nextName,
+#         }
+#     )
 
-def websocket_visual_result(visual_result, count, buffer_order=None, check_numberlist=None):
-    return async_to_sync(channel_layer.group_send)(
-        'count_room',
-        {
-            'type': 'visual_result_change',
-            'visual_result': visual_result,  #當前照到的 ['#18', '#9']
-            'visual_count': count,           #正要做第幾個正確物件(+1條件為做正確物件時手臂到最高點時)
-            'buffer_order': buffer_order,    #buffer區相對位置各個物件數量 [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
-            'check_numberlist': check_numberlist, # 手臂執行序 [2, 1] 1:輸送帶到堆棧、2:輸送帶到buffer、3:buffer到輸送帶
-        }
-    )
+# def websocket_visual_result(visual_result, count, buffer_order=None, check_numberlist=None):
+#     return async_to_sync(channel_layer.group_send)(
+#         'count_room',
+#         {
+#             'type': 'visual_result_change',
+#             'visual_result': visual_result,  #當前照到的 ['#18', '#9']
+#             'visual_count': count,           #正要做第幾個正確物件(+1條件為做正確物件時手臂到最高點時)
+#             'buffer_order': buffer_order,    #buffer區相對位置各個物件數量 [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+#             'check_numberlist': check_numberlist, # 手臂執行序 [2, 1] 1:輸送帶到堆棧、2:輸送帶到buffer、3:buffer到輸送帶
+#         }
+#     )
 
-def websocket_buffer(bufferquanlity):
-    return async_to_sync(channel_layer.group_send)(
-        'count_room',
-        {   
-            'type': 'visual_buffer_change',
-            "bufferquanlity": bufferquanlity   # 
-        }
-    )
+# def websocket_buffer(bufferquanlity):
+#     return async_to_sync(channel_layer.group_send)(
+#         'count_room',
+#         {   
+#             'type': 'visual_buffer_change',
+#             "bufferquanlity": bufferquanlity   # 
+#         }
+#     )
 
 
 @api_view(['POST'])
@@ -416,7 +417,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        # '''
+        '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -445,19 +446,24 @@ def executeRobot(request):
         thread1.join(); thread2.join()
         '''
         # test
-        global TEST_RESET, TEST_RAUSE
-        TEST_RESET = False
-        robot = Robot_test(order_count, order_list, isFinish_queue)
-        # thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
-        thread1 = threading.Thread(target=robot.robot)
-        thread2 = threading.Thread(target=robot.supply_check)
-        thread1.start()
-        time.sleep(4.1)
-        thread2.start()
-        thread1.join(); thread2.join()
+        # global TEST_RESET, TEST_RAUSE
+        # TEST_RESET = False
+        # robot = Robot_test(order_count, order_list, isFinish_queue)
+        # # thread1 = threading.Thread(target=robot_test, args=(order_count, order_list, isFinish_queue))
+        # thread1 = threading.Thread(target=robot.robot)
+        # thread2 = threading.Thread(target=robot.supply_check)
+        # thread1.start()
+        # time.sleep(4.1)
+        # thread2.start()
+        # thread1.join(); thread2.join()
+
+        # demo3 test
+        robot = RobotTest()
+        robot.supply_check(order_list)
         # '''
 
-        robot_state = "finish" if isFinish_queue.get() else "reset"
+        # robot_state = "finish" if isFinish_queue.get() else "reset"
+        robot_state = "finish" 
         print('python stop!!')
         
         return Response({"robot_state": robot_state}, status=status.HTTP_200_OK)
@@ -534,6 +540,7 @@ def executeRobotFinish(request):
         return Response('ok', status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 def getAiWorkOrderData(request):
     ai_order = aiWorkOrder.objects.all().order_by('-id')
@@ -878,11 +885,12 @@ def deleteMultipleOrder(request):
 @api_view(['GET'])
 def history_record(request):
     try:
-        data = HistoryRecord.objects.all()
+        data = HistoryRecord.objects.all().order_by('-id')
         serializer = HistoryRecordSerializer(data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_404_NOT_FOUND)
+    
 # qrcode
 
 # @api_view(['POST'])
