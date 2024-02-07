@@ -339,212 +339,212 @@ class checknumberlist():
         self.checked_quanlity[index_buffer] += 1
 
 
-import random
-import time
+# import random
+# import time
 
-class RobotTest():
-    def __init__(self):
-        self.order_count = 0
-        self.checknumberlist = []
-        self.buffer_order = []
-        self.box_id_checked = []
-        self.buffer_name = ['7A', '9', '13', '16A', '18A', '20', '22', '26', '29', '33', '35']
-        self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# class RobotTest():
+#     def __init__(self):
+#         self.order_count = 0
+#         self.checknumberlist = []
+#         self.buffer_order = []
+#         self.box_id_checked = []
+#         self.buffer_name = ['7A', '9', '13', '16A', '18A', '20', '22', '26', '29', '33', '35']
+#         self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         
-        self.camera_update_count = 1
-        self.detect_count = 1
+#         self.camera_update_count = 1
+#         self.detect_count = 1
         
-    def check_has_three(self, datas):
-        temp = []
-        for data in datas:
-            temp.append(data)
-            if data == 3:
-                temp.append(2)
-        return temp
+#     def check_has_three(self, datas):
+#         temp = []
+#         for data in datas:
+#             temp.append(data)
+#             if data == 3:
+#                 temp.append(2)
+#         return temp
         
-    def supply_check(self):
-        orders = '7A,35,22,29,13,13,35,33,29,16A,13,18A,9,33,29,20,22,20,7A,33,29,9,22,20,26,7A,33,13,18A,26,18A,16A,18A'
-        orders = '7A,35,22,29,13,13,35,33,29'
-        self.orders = orders.split(',')
+#     def supply_check(self):
+#         orders = '7A,35,22,29,13,13,35,33,29,16A,13,18A,9,33,29,20,22,20,7A,33,29,9,22,20,26,7A,33,13,18A,26,18A,16A,18A'
+#         orders = '7A,35,22,29,13,13,35,33,29'
+#         self.orders = orders.split(',')
         
-        count = 1
-        correct_count = 1
+#         count = 1
+#         correct_count = 1
         
-        for order in self.orders:
-            while True:
-                # temp = random.sample(self.buffer_name, 2)
-                # temp.append(self.orders[count - 1])
-                # temp = random.choice(temp)
-                temp = random.sample(self.buffer_name, 1)
-                temp = random.choice(temp)
+#         for order in self.orders:
+#             while True:
+#                 # temp = random.sample(self.buffer_name, 2)
+#                 # temp.append(self.orders[count - 1])
+#                 # temp = random.choice(temp)
+#                 temp = random.sample(self.buffer_name, 1)
+#                 temp = random.choice(temp)
         
-                correct_count += 1
-                # correct_count == 4: 第三次比對結果一定對
-                if correct_count == 4:
-                    temp = order
-                self.box_id_checked.append(temp)
+#                 correct_count += 1
+#                 # correct_count == 4: 第三次比對結果一定對
+#                 if correct_count == 4:
+#                     temp = order
+#                 self.box_id_checked.append(temp)
                 
-                if order == temp:
-                    count += 1
-                    correct_count = 1
-                    break
-        print("orders:", self.orders)
-        print("box_id_checked:", self.box_id_checked)
-        print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
+#                 if order == temp:
+#                     count += 1
+#                     correct_count = 1
+#                     break
+#         print("orders:", self.orders)
+#         print("box_id_checked:", self.box_id_checked)
+#         print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
         
-        check = checknumberlist()
-        self.checknumberlist_finish = check.supply_check(orders.split(','), self.box_id_checked)
-        print('checknumberlist_finish: ', self.checknumberlist_finish)
+#         check = checknumberlist()
+#         self.checknumberlist_finish = check.supply_check(orders.split(','), self.box_id_checked)
+#         print('checknumberlist_finish: ', self.checknumberlist_finish)
         
-        while self.orders:
-            print('\norder_count: ', self.order_count)
-            time.sleep(1)
+#         while self.orders:
+#             print('\norder_count: ', self.order_count)
+#             time.sleep(1)
             
-            if self.camera_update_count <= 4:
-                print(self.box_id_checked[:self.camera_update_count])
-                print(self.checknumberlist_finish[:self.camera_update_count])
-                self.camera_update_count += 1
-            else:
+#             if self.camera_update_count <= 4:
+#                 print(self.box_id_checked[:self.camera_update_count])
+#                 print(self.checknumberlist_finish[:self.camera_update_count])
+#                 self.camera_update_count += 1
+#             else:
                 
-                if self.detect_count != 1:
-                    print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
-                    time.sleep(2)
+#                 if self.detect_count != 1:
+#                     print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
+#                     time.sleep(2)
                 
-                self.check_buffer()
-                if self.orders:
-                    temp = self.box_id_checked[self.camera_update_count - 5]
-                    print('正確答案: ', self.orders[0], '來料: ', temp)
-                    if temp == self.orders[0]:
-                        # print('與工單一樣')
-                        self.order_count += 1
-                        self.box_is_correct()
+#                 self.check_buffer()
+#                 if self.orders:
+#                     temp = self.box_id_checked[self.camera_update_count - 5]
+#                     print('正確答案: ', self.orders[0], '來料: ', temp)
+#                     if temp == self.orders[0]:
+#                         # print('與工單一樣')
+#                         self.order_count += 1
+#                         self.box_is_correct()
                         
-                        print(f'正在操作第 {self.detect_count} 個物件(停2秒)')
-                        visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.check_has_three(check_numberlist)
-                        print(visual_result)
-                        print(check_numberlist)
+#                         print(f'正在操作第 {self.detect_count} 個物件(停2秒)')
+#                         visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
+#                         check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
+#                         check_numberlist = self.check_has_three(check_numberlist)
+#                         print(visual_result)
+#                         print(check_numberlist)
                         
-                        self.detect_count += 1
-                        self.camera_update_count += 1
+#                         self.detect_count += 1
+#                         self.camera_update_count += 1
                         
                         
-                    else:
-                        self.box_is_wrong(self.buffer_name, temp)
-                        visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.check_has_three(check_numberlist)
-                        print(visual_result)
-                        print(check_numberlist)
+#                     else:
+#                         self.box_is_wrong(self.buffer_name, temp)
+#                         visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
+#                         check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
+#                         check_numberlist = self.check_has_three(check_numberlist)
+#                         print(visual_result)
+#                         print(check_numberlist)
                         
-                        self.camera_update_count += 1
+#                         self.camera_update_count += 1
                         
-                        print('錯誤!! 夾至 Buffer 區(停2秒)')
-                    # print(self.box_id_checked[self.camera_update_count - 5:self.camera_update_count - 1])
-                    # print(self.checknumberlist_finish[self.camera_update_count - 5:self.camera_update_count - 1])
-                    time.sleep(2)
+#                         print('錯誤!! 夾至 Buffer 區(停2秒)')
+#                     # print(self.box_id_checked[self.camera_update_count - 5:self.camera_update_count - 1])
+#                     # print(self.checknumberlist_finish[self.camera_update_count - 5:self.camera_update_count - 1])
+#                     time.sleep(2)
                     
-                # print('checknumberlist:', self.checknumberlist)
-                # print('buffer_order:', self.buffer_order)
-                # print('checked_quanlity', self.checked_quanlity)
+#                 # print('checknumberlist:', self.checknumberlist)
+#                 # print('buffer_order:', self.buffer_order)
+#                 # print('checked_quanlity', self.checked_quanlity)
             
     
-    def check_buffer(self):
-        if self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
-            self.camera_update_count -= 1
+#     def check_buffer(self):
+#         if self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
+#             self.camera_update_count -= 1
             
-        while self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
-            # print(f'buffer 區有{self.orders[0]}')
-            print(f'從 Buffer 夾第 {self.detect_count} 個物件至棧板(停2秒)')
+#         while self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
+#             # print(f'buffer 區有{self.orders[0]}')
+#             print(f'從 Buffer 夾第 {self.detect_count} 個物件至棧板(停2秒)')
             
-            self.checknumber = 3
-            self.checknumberlist.append(self.checknumber)
-            self.checked_quanlity[self.buffer_name.index(self.orders[0])] -= 1
-            self.order_count += 1
-            self.buffer_order[1:]
-            self.buffer_order.append(self.orders.pop(0))
-            print('\norder_count: ', self.order_count)
-            print('buffer_order: ', self.buffer_order)
+#             self.checknumber = 3
+#             self.checknumberlist.append(self.checknumber)
+#             self.checked_quanlity[self.buffer_name.index(self.orders[0])] -= 1
+#             self.order_count += 1
+#             self.buffer_order[1:]
+#             self.buffer_order.append(self.orders.pop(0))
+#             print('\norder_count: ', self.order_count)
+#             print('buffer_order: ', self.buffer_order)
             
-            # visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
-            # check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
-            # print(visual_result)
-            # print(check_numberlist)
+#             # visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
+#             # check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
+#             # print(visual_result)
+#             # print(check_numberlist)
             
-            time.sleep(2)
+#             time.sleep(2)
             
-            self.detect_count += 1
+#             self.detect_count += 1
             
-            if not self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
-                self.camera_update_count += 1
+#             if not self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
+#                 self.camera_update_count += 1
             
             
             
 
-    def box_is_correct(self):
-        correct_number = 1
-        self.checknumberlist.append(correct_number)
-        self.orders.pop(0)
+#     def box_is_correct(self):
+#         correct_number = 1
+#         self.checknumberlist.append(correct_number)
+#         self.orders.pop(0)
 
-    def box_is_wrong(self, items, temp):
-        wrong_number = 2
-        self.checknumberlist.append(wrong_number)
-        index_buffer = items.index(temp)
-        self.checked_quanlity[index_buffer] += 1
+#     def box_is_wrong(self, items, temp):
+#         wrong_number = 2
+#         self.checknumberlist.append(wrong_number)
+#         index_buffer = items.index(temp)
+#         self.checked_quanlity[index_buffer] += 1
         
-class checknumberlist():
-    def __init__(self):
-        self.order_count = 0
-        self.checknumberlist = []
-        self.buffer_order = []
-        self.box_id_checked = []
-        self.buffer_name = ['7A', '9', '13', '16A', '18A', '20', '22', '26', '29', '33', '35']
-        self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# class checknumberlist():
+#     def __init__(self):
+#         self.order_count = 0
+#         self.checknumberlist = []
+#         self.buffer_order = []
+#         self.box_id_checked = []
+#         self.buffer_name = ['7A', '9', '13', '16A', '18A', '20', '22', '26', '29', '33', '35']
+#         self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         
-        self.camera_update_count = 0
+#         self.camera_update_count = 0
         
-    def supply_check(self, orders, box_id_checked):
-        self.orders = orders
-        self.box_id_checked = box_id_checked
+#     def supply_check(self, orders, box_id_checked):
+#         self.orders = orders
+#         self.box_id_checked = box_id_checked
         
-        count = 1
-        correct_count = 1
+#         count = 1
+#         correct_count = 1
         
-        while self.orders:
-            self.check_buffer()
-            if self.orders:
-                temp = self.box_id_checked[self.camera_update_count]
-                if temp == self.orders[0]:
-                    self.order_count += 1
-                    self.box_is_correct()
-                    self.camera_update_count += 1
-                else:
-                    self.box_is_wrong(self.buffer_name, temp)
-                    self.camera_update_count += 1
+#         while self.orders:
+#             self.check_buffer()
+#             if self.orders:
+#                 temp = self.box_id_checked[self.camera_update_count]
+#                 if temp == self.orders[0]:
+#                     self.order_count += 1
+#                     self.box_is_correct()
+#                     self.camera_update_count += 1
+#                 else:
+#                     self.box_is_wrong(self.buffer_name, temp)
+#                     self.camera_update_count += 1
         
-        return self.checknumberlist
+#         return self.checknumberlist
             
     
-    def check_buffer(self):
-        while self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
-            self.checknumber = 3
-            self.checknumberlist.append(self.checknumber)
-            self.checked_quanlity[self.buffer_name.index(self.orders[0])] -= 1
-            self.order_count += 1
-            self.buffer_order.append(self.orders.pop(0))
-            self.camera_update_count += 1
+#     def check_buffer(self):
+#         while self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:
+#             self.checknumber = 3
+#             self.checknumberlist.append(self.checknumber)
+#             self.checked_quanlity[self.buffer_name.index(self.orders[0])] -= 1
+#             self.order_count += 1
+#             self.buffer_order.append(self.orders.pop(0))
+#             self.camera_update_count += 1
 
-    def box_is_correct(self):
-        correct_number = 1
-        self.checknumberlist.append(correct_number)
-        self.orders.pop(0)
+#     def box_is_correct(self):
+#         correct_number = 1
+#         self.checknumberlist.append(correct_number)
+#         self.orders.pop(0)
 
-    def box_is_wrong(self, items, temp):
-        wrong_number = 2
-        self.checknumberlist.append(wrong_number)
-        index_buffer = items.index(temp)
-        self.checked_quanlity[index_buffer] += 1
+#     def box_is_wrong(self, items, temp):
+#         wrong_number = 2
+#         self.checknumberlist.append(wrong_number)
+#         index_buffer = items.index(temp)
+#         self.checked_quanlity[index_buffer] += 1
             
 # robot = RobotTest()
 # robot.supply_check()
