@@ -629,38 +629,38 @@ def parse_layer(data):
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        worklist_id = request.data.get("orderId")
-        order = Order.objects.filter(id=int(worklist_id)).first()        
-        # order.aiTraining_state = "is_training"
-        # order.save()
-        unique_code = order.unique_code
+        # worklist_id = request.data.get("orderId")
+        # order = Order.objects.filter(id=int(worklist_id)).first()        
+        # # order.aiTraining_state = "is_training"
+        # # order.save()
+        # unique_code = order.unique_code
         
-        t1 = time.time()
-        '''
-        ai_calculate(worklist_id, unique_code)
-        '''
-        main_2d(worklist_id, unique_code)
-        main_3d(worklist_id, unique_code)
+        # t1 = time.time()
         # '''
-        t2 = time.time()
-        training_time = round(t2-t1, 3)
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # ai_calculate(worklist_id, unique_code)
         # '''
-        ai_df = pd.read_csv(ai_csvfile_path)
-        ai_list = ai_df['matched_box_name'].tolist()
-        ai_layer_count = ai_df['layer'].tolist()
-        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        aiLayer_order = parse_layer(ai_layer_count)
-        order.aiTraining_order = aiResult_str
-        order.aiLayer_order = aiLayer_order
-        order.aiTraining_state = "finish_training"
-        order.save()
-        # aiResult_str = "1, 2, 3, 4, 5"
-        # aiLayer_order = '3,2'
-        # time.sleep(5)
+        # main_2d(worklist_id, unique_code)
+        # main_3d(worklist_id, unique_code)
+        # # '''
+        # t2 = time.time()
+        # training_time = round(t2-t1, 3)
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # # '''
+        # ai_df = pd.read_csv(ai_csvfile_path)
+        # ai_list = ai_df['matched_box_name'].tolist()
+        # ai_layer_count = ai_df['layer'].tolist()
+        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        # aiLayer_order = parse_layer(ai_layer_count)
+        # order.aiTraining_order = aiResult_str
+        # order.aiLayer_order = aiLayer_order
+        # order.aiTraining_state = "finish_training"
+        # order.save()
+        aiResult_str = "1, 2, 3, 4, 5"
+        aiLayer_order = '3,2'
+        time.sleep(5)
         return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
@@ -890,7 +890,19 @@ def history_record(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_404_NOT_FOUND)
-    
+
+@api_view(['GET'])
+def filter_history_record(request):
+    try:
+        date = request.GET.get('date').split("-")
+        data = HistoryRecord.objects.filter(createdAt__year=int(date[0]), createdAt__month=int(date[1]),
+                                            createdAt__day=int(date[2]))
+        print(date)
+        print(data)
+        
+        return Response('ok', status=status.HTTP_200_OK)
+    except:
+        return Response('error', status=status.HTTP_404_NOT_FOUND)
 # qrcode
 
 # @api_view(['POST'])

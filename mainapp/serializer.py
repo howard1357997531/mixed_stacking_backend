@@ -47,4 +47,4 @@ class MultipleOrderSerializer(ModelSerializer):
 class HistoryRecordSerializer(ModelSerializer):
     class Meta:
         model = HistoryRecord
-        fields = ("id", "name", "order_id", "insert_index", "start_time", "end_time")
+        fields = ("id", "name", "order_id", "insert_index", "start_time", "end_time", "createdAt")

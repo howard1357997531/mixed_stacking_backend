@@ -23,6 +23,7 @@ urlpatterns = [
     path('createMultipleOrder/', views.createMultipleOrder, name="createMultipleOrder"),
     path('deleteMultipleOrder/', views.deleteMultipleOrder, name="deleteMultipleOrder"),
     path('history_record/', views.history_record, name="history_record"),
+    path('filter_history_record/', views.filter_history_record, name="filter_history_record"),
     
 
     # qrcode
