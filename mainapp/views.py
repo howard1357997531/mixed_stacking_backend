@@ -660,7 +660,7 @@ def aiTraining(request):
         # order.save()
         aiResult_str = "1, 2, 3, 4, 5"
         aiLayer_order = '3,2'
-        time.sleep(5)
+        time.sleep(15)
         return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
