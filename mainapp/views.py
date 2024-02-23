@@ -897,12 +897,11 @@ def filter_history_record(request):
         date = request.GET.get('date').split("-")
         data = HistoryRecord.objects.filter(createdAt__year=int(date[0]), createdAt__month=int(date[1]),
                                             createdAt__day=int(date[2]))
-        print(date)
-        print(data)
-        
-        return Response('ok', status=status.HTTP_200_OK)
+        serializer = HistoryRecordSerializer(data, many=True)        
+        return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_404_NOT_FOUND)
+    
 # qrcode
 
 # @api_view(['POST'])
