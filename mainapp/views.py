@@ -680,7 +680,7 @@ def getOrderData(request):
 @api_view(['GET'])
 def filterOrderData(request):
     try:
-        time.sleep(1)
+        # time.sleep(1)
         state = request.GET.get('state')
         value = request.GET.get('value')
         mode = request.GET.get('mode')
