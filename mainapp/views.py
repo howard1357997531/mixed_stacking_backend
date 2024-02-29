@@ -406,10 +406,15 @@ from .arm_buffer.Yaskawa_function import Yaskawa_control as Yaskawa_control_buff
 YASKAWA_ROBOT_BUFFER = None
 YASKAWA_ROBOT = None
 KUKA_ROBOT  = None
+robot = RobotTest()
+
+RESET_ALL = False
 
 @api_view(['POST'])
 def executeRobot(request):
     global YASKAWA_ROBOT_BUFFER, YASKAWA_ROBOT, KUKA_ROBOT
+    global RESET_ALL
+    RESET_ALL = False
     try:
         orderId = int(request.data.get('orderId'))
         order = Order.objects.filter(id=orderId).first()
@@ -458,12 +463,15 @@ def executeRobot(request):
         # thread1.join(); thread2.join()
 
         # demo3 test
-        robot = RobotTest()
-        robot.supply_check(order_list)
+        
+        robot_state = robot.supply_check(order_list)
         # '''
-
+        print(robot_state)
+        print('RESET_ALL:', RESET_ALL)
+        if RESET_ALL:
+            robot_state = 'reset_all'
         # robot_state = "finish" if isFinish_queue.get() else "reset"
-        robot_state = "finish" 
+        # robot_state = "finish" 
         print('python stop!!')
         
         return Response({"robot_state": robot_state}, status=status.HTTP_200_OK)
@@ -476,7 +484,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        # ''' 
+        ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
@@ -490,7 +498,7 @@ def robotSetting(request):
             YASKAWA_ROBOT_BUFFER.reset()
         '''
         # test
-        global TEST_RESET, TEST_RAUSE
+        global TEST_RESET, TEST_RAUSE, RESET_ALL
         if mode == 'pause':
             print(mode)
         elif mode == 'unPause':
@@ -501,7 +509,13 @@ def robotSetting(request):
             print(mode, robot_speed)
         elif mode == 'reset':
             TEST_RESET = True
+            robot.robot_reset()
             print(mode)
+        elif mode == 'reset_all':
+            RESET_ALL = True
+            robot.robot_reset()
+            print('reset_all')
+            
         # '''
         return Response({}, status=status.HTTP_200_OK)
     except:
@@ -521,19 +535,21 @@ def executingOrder(request):
 def executeRobotFinish(request):
     try:
         data = request.data
-        datas, insert_index = parse_execution_data(data.get('executeOrderStr'))
+        datas, insert_index, reset_index = parse_execution_data(data.get('executeOrderStr'), data.get('resetIndex'))
         start_time = data.get('startTime')
         end_time = datetime.now().strftime('%Y/%m/%d %H:%M')
         name_list = []
+
         for i in datas:
             id = i.split('*')[0]
-            order = Order.objects.filter(id=int(id)).first()
+            order = Order.objeScts.filter(id=int(id)).first()
             name_list.append(order.name)
 
         HistoryRecord.objects.create(
             name = ','.join(name_list),
             order_id = ','.join(datas),
             insert_index = ','.join(map(str, insert_index)) if insert_index else "",
+            reset_index = ','.join(map(str, reset_index)) if reset_index else "",
             start_time = start_time,
             end_time = end_time,
         )

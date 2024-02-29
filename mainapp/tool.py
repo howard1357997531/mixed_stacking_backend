@@ -1,19 +1,26 @@
-a = ["1", "1", "1", "1_insert", "1_insert", "2", "1", "2_insert"]
-a = ["1", "1", "2", "1_insert", "1_insert", "2_insert", "2", "3", "3", "3","2_insert"]
+a = ["1", "1", "1", "1", "1_insert", "1_insert", "1_insert", "2", "1", "2_insert"]
+# a = ["1", "1", "2", "1_insert", "1_insert", "2_insert", "2", "3", "3", "3","2_insert"]
 a = ["1_insert", "1_insert", "1", "1", "2", "2_insert", "1_insert", "1_insert", "2", "3", "3", "3","2_insert"]
 
+# reset_index_org = [2, 8 , 10]
 
-def parse_execution_data(data):
+def parse_execution_data(data, reset_index_org):
     datas = []
     insert_index = []
+    reset_index = []
     data_temp = None
     insert_temp = None
     count = -1
+    reset_index_count = 0
     for i in data:
+        count_in_reset_index = reset_index_count in reset_index_org
         if i.endswith('_insert'):
+            # 一開始進來 insert_temp 必為 none，先走 else 
+            # insert_temp 為上一個插單 id
+            # 每次進來都會 data_temp = None
             data_temp = None
             insert_num = i.replace('_insert', '')
-            if insert_temp:
+            if insert_temp and not count_in_reset_index:
                 if insert_num == insert_temp:
                     if '*' in datas[count]:
                         num = datas[count].split('*')[0]
@@ -29,11 +36,19 @@ def parse_execution_data(data):
             else:
                 count += 1
                 datas.append(insert_num)
-                insert_temp = insert_num
                 insert_index.append(count)
+                # 如果 count_in_reset_index = False 才會改變 insert_temp
+                if count_in_reset_index:
+                    insert_temp = None
+                    reset_index.append(count)
+                else:
+                    insert_temp = insert_num
         else:
+            # 一開始進來 data_temp 必為 none，先走 else 
+            # data_temp 為上一個非插單 id
+            # 每次進來都會 insert_temp = None
             insert_temp = None
-            if data_temp:
+            if data_temp and not count_in_reset_index:
                 if i == data_temp:
                     if '*' in datas[count]:
                         num = datas[count].split('*')[0]
@@ -48,9 +63,15 @@ def parse_execution_data(data):
             else:
                 count += 1
                 datas.append(i)
-                data_temp = i
+                # 如果 count_in_reset_index = False 才會改變 data_temp
+                if count_in_reset_index:
+                    data_temp = None
+                    reset_index.append(count)
+                else:
+                    data_temp = i
+        reset_index_count += 1
     
-    return datas, insert_index
+    return datas, insert_index, reset_index
 
 import random
 import time
@@ -112,14 +133,14 @@ def websocket_buffer(bufferquanlity):
 
 class RobotTest():
     def __init__(self):
+        self.call_reset = False
         self.order_count = 0
         self.checknumberlist = []
         self.buffer_order = []
         self.box_id_checked = []
         self.buffer_name = ['7A', '9', '13', '16A', '18A', '20', '22', '26', '29', '33', '35']
         self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        
-        self.check = checknumberlist() 
+         
         self.camera_update_count = 1
         self.detect_count = 1
 
@@ -130,8 +151,19 @@ class RobotTest():
             if data == 3:
                 temp.append(2)
         return temp
+    
+    def robot_reset(self):
+        self.call_reset = True
         
     def supply_check(self, order_data):
+        self.call_reset = False
+        self.order_count = 0
+        self.checknumberlist = []
+        self.buffer_order = []
+        self.box_id_checked = []
+        self.check = checknumberlist()
+        self.camera_update_count = 1
+        self.detect_count = 1
         # orders = '7A,35,22,29,13,13,35,33,29,16A,13,18A,9,33,29,20,22,20,7A,33,29,9,22,20,26,7A,33,13,18A,26,18A,16A,18A'
         # orders = '7A,35,22,29,13,13,35,33,29'
         # self.orders = orders.split(',')
@@ -173,7 +205,7 @@ class RobotTest():
         websocket_robot_state('prepare')
         # ----------------------------------------
 
-        while self.orders:
+        while self.orders and not self.call_reset:
             print('\norder_count: ', self.order_count)
             
             if self.camera_update_count <= 4:   
@@ -237,6 +269,9 @@ class RobotTest():
             
             if self.order_count == self.order_length:
                 break
+        
+        end_state = 'finish' if not self.call_reset else 'reset'
+        return end_state
 
     def check_buffer(self):
         if self.orders and self.checked_quanlity[self.buffer_name.index(self.orders[0])] > 0:

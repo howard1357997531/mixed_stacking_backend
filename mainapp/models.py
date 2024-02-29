@@ -93,6 +93,7 @@ class HistoryRecord(Common):
     name = models.CharField(max_length=255, null=True, blank=True)
     order_id = models.CharField(max_length=255, null=True, blank=True)
     insert_index = models.CharField(max_length=255, null=True, blank=True)
+    reset_index = models.CharField(max_length=255, null=True, blank=True)
     start_time = models.CharField(max_length=255, null=True, blank=True)
     end_time = models.CharField(max_length=255, null=True, blank=True)
 
