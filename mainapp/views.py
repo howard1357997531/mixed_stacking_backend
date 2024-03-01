@@ -538,18 +538,26 @@ def executeRobotFinish(request):
         datas, insert_index, reset_index = parse_execution_data(data.get('executeOrderStr'), data.get('resetIndex'))
         start_time = data.get('startTime')
         end_time = datetime.now().strftime('%Y/%m/%d %H:%M')
+        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else ''
         name_list = []
-
+        # 若發生reset_all而已不是執行中第一單 會清除reset_index最後一個
+        if (reset_all_index >= 1):
+            reset_index = reset_index[:-1]
+        print('resetAll:', data)
+        print(datas, insert_index, reset_index)
+        
         for i in datas:
             id = i.split('*')[0]
-            order = Order.objeScts.filter(id=int(id)).first()
+            order = Order.objects.filter(id=int(id)).first()
             name_list.append(order.name)
 
+        # 存 "" 有風險 但在admin裡面儲存 "" 會變 null
         HistoryRecord.objects.create(
             name = ','.join(name_list),
             order_id = ','.join(datas),
             insert_index = ','.join(map(str, insert_index)) if insert_index else "",
             reset_index = ','.join(map(str, reset_index)) if reset_index else "",
+            reset_all_index = str(reset_all_index),
             start_time = start_time,
             end_time = end_time,
         )

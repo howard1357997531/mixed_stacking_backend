@@ -1,8 +1,8 @@
 a = ["1", "1", "1", "1", "1_insert", "1_insert", "1_insert", "2", "1", "2_insert"]
-# a = ["1", "1", "2", "1_insert", "1_insert", "2_insert", "2", "3", "3", "3","2_insert"]
+a = ["1", "1", "2", "1_insert", "1_insert", "2_insert", "2", "3", "3", "3","2_insert"]
 a = ["1_insert", "1_insert", "1", "1", "2", "2_insert", "1_insert", "1_insert", "2", "3", "3", "3","2_insert"]
 
-# reset_index_org = [2, 8 , 10]
+reset_index_org = [2, 8 , 10]
 
 def parse_execution_data(data, reset_index_org):
     datas = []
@@ -161,6 +161,7 @@ class RobotTest():
         self.checknumberlist = []
         self.buffer_order = []
         self.box_id_checked = []
+        self.checked_quanlity = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.check = checknumberlist()
         self.camera_update_count = 1
         self.detect_count = 1
