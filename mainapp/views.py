@@ -538,13 +538,16 @@ def executeRobotFinish(request):
         datas, insert_index, reset_index = parse_execution_data(data.get('executeOrderStr'), data.get('resetIndex'))
         start_time = data.get('startTime')
         end_time = datetime.now().strftime('%Y/%m/%d %H:%M')
-        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else ''
+        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else 0
         name_list = []
-        # 若發生reset_all而已不是執行中第一單 會清除reset_index最後一個
-        if (reset_all_index >= 1):
-            reset_index = reset_index[:-1]
         print('resetAll:', data)
         print(datas, insert_index, reset_index)
+        # 若發生reset_all而已不是執行中第一單 會清除reset_index最後一個
+        if (reset_all_index >= 1):
+            print("inner")
+            reset_index = reset_index[:-1]
+
+        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else ""
         
         for i in datas:
             id = i.split('*')[0]
@@ -682,9 +685,9 @@ def aiTraining(request):
         # order.aiLayer_order = aiLayer_order
         # order.aiTraining_state = "finish_training"
         # order.save()
-        aiResult_str = "1, 2, 3, 4, 5"
-        aiLayer_order = '3,2'
-        time.sleep(15)
+        aiResult_str = "35,13,20,20,20,13,33,35,9,22,22,9,29,26,33,33,18A,29,29,7A,18A,22,18A,29,26,18A,7A,16A,13,33,7A,16A,13"
+        aiLayer_order = '4,4,6,6,6,5,2'
+        time.sleep(5)
         return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)

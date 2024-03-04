@@ -179,6 +179,8 @@ class RobotTest():
                 # temp.append(self.orders[count - 1])
                 temp = random.sample(self.buffer_name, 1)
                 temp = random.choice(temp)
+                # temp = self.orders[count - 1]
+
         
                 correct_count += 1
                 # correct_count == 4: 第三次比對結果一定對
@@ -201,7 +203,7 @@ class RobotTest():
 
         # ----------------------------------------
         print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
-        time.sleep(2)
+        time.sleep(1)
         websocket_object_count(self.detect_count)
         websocket_robot_state('prepare')
         # ----------------------------------------
