@@ -521,7 +521,7 @@ def robotSetting(request):
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POSt'])
+@api_view(['POST'])
 def executingOrder(request):
     try:
         print(request.data)
@@ -530,6 +530,15 @@ def executingOrder(request):
         return Response({}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': "fail"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def executeRobotAuto(request):
+    try:
+        time.sleep(5)
+        print('auto')
+        return Response('ok', status=status.HTTP_200_OK)
+    except:
+        return Response('error', status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 def executeRobotFinish(request):
