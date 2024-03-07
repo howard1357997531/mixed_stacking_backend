@@ -532,9 +532,9 @@ def executingOrder(request):
         return Response({'error_msg': "fail"}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-def executeRobotAuto(request):
+def executeRobotAutoRetrieve(request):
     try:
-        time.sleep(5)
+        time.sleep(10)
         print('auto')
         return Response('ok', status=status.HTTP_200_OK)
     except:
