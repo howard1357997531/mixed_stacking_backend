@@ -533,10 +533,19 @@ def executingOrder(request):
 
 @api_view(['POST'])
 def executeRobotAutoRetrieve(request):
+    global TEST_RESET
+    TEST_RESET = False
+    finish = False
     try:
-        time.sleep(10)
-        print('auto')
-        return Response('ok', status=status.HTTP_200_OK)
+        while not TEST_RESET or not finish:
+            for i in range(7):
+                time.sleep(1)
+                if TEST_RESET: break
+            break
+        
+        robot_state = "reset" if TEST_RESET else "success"
+
+        return Response({"robot_state": robot_state}, status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_404_NOT_FOUND)
 
