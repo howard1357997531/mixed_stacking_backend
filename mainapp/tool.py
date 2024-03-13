@@ -133,6 +133,7 @@ def websocket_buffer(bufferquanlity):
 
 class RobotTest():
     def __init__(self):
+        self.call_pause = False
         self.call_reset = False
         self.order_count = 0
         self.checknumberlist = []
@@ -152,10 +153,17 @@ class RobotTest():
                 temp.append(2)
         return temp
     
+    def robot_pause(self):
+        self.call_pause = True
+
+    def robot_unPause(self):
+        self.call_pause = False
+
     def robot_reset(self):
         self.call_reset = True
         
     def supply_check(self, order_data):
+        self.call_pause = False
         self.call_reset = False
         self.order_count = 0
         self.checknumberlist = []
@@ -209,67 +217,83 @@ class RobotTest():
         # ----------------------------------------
 
         while self.orders and not self.call_reset:
-            print('\norder_count: ', self.order_count)
+            print('\norder_count: ', self.order_count)\
             
-            if self.camera_update_count <= 4:   
-                # ----------------------------------------
-                visual_result = self.box_id_checked[:self.camera_update_count]
-                check_numberlist = self.checknumberlist_finish[:self.camera_update_count]
-                print(visual_result)
-                print(check_numberlist)
-                websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
-                time.sleep(1)
-                # ----------------------------------------
-
-                self.camera_update_count += 1
-            else:
-                print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
-
-                # ----------------------------------------
-                websocket_object_count(self.detect_count)
-                websocket_robot_state('prepare')
-                # ----------------------------------------
-                time.sleep(2)
-                
-                self.check_buffer()
-                if self.orders:
-                    temp = self.box_id_checked[self.camera_update_count - 5]
-                    # print('正確答案: ', self.orders[0], '來料: ', temp)
-                    if temp == self.orders[0]:
-                        self.order_count += 1
-                        self.box_is_correct()
-                        
-                        print(f'正在操作第 {self.detect_count} 個物件(停2秒)')
-
-                        # ----------------------------------------
-                        websocket_robot_state('operate')
-                        visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.check_has_three(check_numberlist)
-                        websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
-                        # ----------------------------------------
-
-                        self.detect_count += 1
-                        self.camera_update_count += 1
-                    else:
-                        self.box_is_wrong(self.buffer_name, temp)
-                        # ----------------------------------------
-                        visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
-                        check_numberlist = self.check_has_three(check_numberlist)
-                        websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
-                        # ----------------------------------------
-
-                        self.camera_update_count += 1
-                        print('錯誤!! 夾至 Buffer 區(停2秒)')
-                    
-                    # ----------------------------------------7
+            if not self.call_pause:
+                if self.camera_update_count <= 4:   
+                    # ----------------------------------------
+                    visual_result = self.box_id_checked[:self.camera_update_count]
+                    check_numberlist = self.checknumberlist_finish[:self.camera_update_count]
                     print(visual_result)
                     print(check_numberlist)
+                    websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
+                    for i in range(2):
+                        time.sleep(0.5)
+                        if self.call_reset: break
+                        if self.call_pause: break
                     # ----------------------------------------
 
-                    time.sleep(2)
-            
+                    self.camera_update_count += 1
+                else:
+                    print(f'準備操作第 {self.detect_count} 個物件(停2秒)')
+
+                    # ----------------------------------------
+                    websocket_object_count(self.detect_count)
+                    websocket_robot_state('prepare')
+                    # ----------------------------------------
+                    for i in range(4):
+                        time.sleep(0.5)
+                        if self.call_reset: break
+                        if self.call_pause: break
+                    
+                    self.check_buffer()
+                    if self.orders:
+                        temp = self.box_id_checked[self.camera_update_count - 5]
+                        # print('正確答案: ', self.orders[0], '來料: ', temp)
+                        if temp == self.orders[0]:
+                            self.order_count += 1
+                            self.box_is_correct()
+                            
+                            print(f'正在操作第 {self.detect_count} 個物件(停2秒)')
+
+                            # ----------------------------------------
+                            websocket_robot_state('operate')
+                            visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
+                            check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
+                            check_numberlist = self.check_has_three(check_numberlist)
+                            websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
+                            # ----------------------------------------
+
+                            self.detect_count += 1
+                            self.camera_update_count += 1
+                        else:
+                            self.box_is_wrong(self.buffer_name, temp)
+                            # ----------------------------------------
+                            visual_result = self.box_id_checked[self.camera_update_count - 4:self.camera_update_count]
+                            check_numberlist = self.checknumberlist_finish[self.camera_update_count - 4:self.camera_update_count]
+                            check_numberlist = self.check_has_three(check_numberlist)
+                            websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
+                            # ----------------------------------------
+
+                            self.camera_update_count += 1
+                            print('錯誤!! 夾至 Buffer 區(停2秒)')
+                        
+                        # ----------------------------------------7
+                        print(visual_result)
+                        print(check_numberlist)
+                        # ----------------------------------------
+
+                        for i in range(4):
+                            time.sleep(0.5)
+                            if self.call_reset: break
+                            if self.call_pause: break
+            else:
+                print('in pause')
+                while self.call_pause and not self.call_reset:
+                    time.sleep(0.5)
+                    if not self.call_pause: break
+                    if self.call_reset: break
+                print('out pause')
             if self.order_count == self.order_length:
                 break
         
@@ -300,7 +324,10 @@ class RobotTest():
             websocket_visual_result(visual_result, self.detect_count, None, check_numberlist)
             # ----------------------------------------
 
-            time.sleep(2)
+            for i in range(4):
+                time.sleep(0.5)
+                if self.call_reset: break
+                if self.call_pause: break
 
             self.detect_count += 1
 

@@ -500,24 +500,22 @@ def robotSetting(request):
         # test
         global TEST_RESET, TEST_RAUSE, RESET_ALL
         if mode == 'pause':
-            print(mode)
+            robot.robot_pause()
         elif mode == 'unPause':
-            print(mode)
+            robot.robot_unPause()
         elif mode == 'speedUp' or mode == 'speedDown':
             robot_speed = data.get('speed') + 10 if mode == "speedUp" else data.get('speed') - 10
             robot_speed = 100 if robot_speed > 100 else robot_speed
-            print(mode, robot_speed)
         elif mode == 'reset':
             TEST_RESET = True
             robot.robot_reset()
-            print(mode)
         elif mode == 'reset_all':
             RESET_ALL = True
             robot.robot_reset()
             print('reset_all')
             
         # '''
-        return Response({}, status=status.HTTP_200_OK)
+        return Response({'mode': mode}, status=status.HTTP_200_OK)
     except:
         return Response({'error_msg': '啟動手臂失敗'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -682,40 +680,49 @@ def parse_layer(data):
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        # worklist_id = request.data.get("orderId")
-        # order = Order.objects.filter(id=int(worklist_id)).first()        
-        # # order.aiTraining_state = "is_training"
-        # # order.save()
-        # unique_code = order.unique_code
+        worklist_id = request.data.get("orderId")
+        order = Order.objects.filter(id=int(worklist_id)).first()        
+        order.aiTraining_state = "is_training"
+        order.save()
+        unique_code = order.unique_code
         
-        # t1 = time.time()
+        t1 = time.time()
+        '''
+        ai_calculate(worklist_id, unique_code)
+        '''
+        main_2d(worklist_id, unique_code)
+        main_3d(worklist_id, unique_code)
         # '''
-        # ai_calculate(worklist_id, unique_code)
+        t2 = time.time()
+        training_time = round(t2-t1, 3)
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        '''
+        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
         # '''
-        # main_2d(worklist_id, unique_code)
-        # main_3d(worklist_id, unique_code)
-        # # '''
-        # t2 = time.time()
-        # training_time = round(t2-t1, 3)
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        # '''
-        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
-        # # '''
-        # ai_df = pd.read_csv(ai_csvfile_path)
-        # ai_list = ai_df['matched_box_name'].tolist()
-        # ai_layer_count = ai_df['layer'].tolist()
-        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        # aiLayer_order = parse_layer(ai_layer_count)
-        # order.aiTraining_order = aiResult_str
-        # order.aiLayer_order = aiLayer_order
-        # order.aiTraining_state = "finish_training"
+        ai_df = pd.read_csv(ai_csvfile_path)
+        ai_list = ai_df['matched_box_name'].tolist()
+        ai_layer_count = ai_df['layer'].tolist()
+        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        aiLayer_order = parse_layer(ai_layer_count)
+        order.aiTraining_order = aiResult_str
+        order.aiLayer_order = aiLayer_order
+        order.aiTraining_state = "finish_training"
+        order.save()
+
+        # test
+        # aiResult_str = "35,13,20,20,20,13,33,35,9,22,22,9,29,26,33,33,18A,29,29,7A,18A,22,18A,29,26,18A,7A,16A,13,33,7A,16A,13"
+        # aiLayer_order = '4,4,6,6,6,5,2'
+        # time.sleep(5)
+        # order.aiTraining_state = "no_training"
         # order.save()
-        aiResult_str = "35,13,20,20,20,13,33,35,9,22,22,9,29,26,33,33,18A,29,29,7A,18A,22,18A,29,26,18A,7A,16A,13,33,7A,16A,13"
-        aiLayer_order = '4,4,6,6,6,5,2'
-        time.sleep(5)
+        # print('ok')
         return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
+        worklist_id = request.data.get("orderId")
+        order = Order.objects.filter(id=int(worklist_id)).first()        
+        order.aiTraining_state = "no_training"
+        order.save()
         return Response('request fail', status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
