@@ -25,7 +25,7 @@ urlpatterns = [
     path('deleteMultipleOrder/', views.deleteMultipleOrder, name="deleteMultipleOrder"),
     path('history_record/', views.history_record, name="history_record"),
     path('filter_history_record/', views.filter_history_record, name="filter_history_record"),
-    
+    path('clear_new_history_record/', views.clear_new_history_record, name="clear_new_history_record"),
 
     # qrcode
     # path('getOrderXlsxFile/', views.getOrderXlsxFile, name="getOrderXlsxFile"),

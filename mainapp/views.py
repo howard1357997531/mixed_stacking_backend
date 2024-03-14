@@ -537,8 +537,10 @@ def executeRobotAutoRetrieve(request):
 
     try:
         while not TEST_RESET or not RESET_ALL:
-            for i in range(7):
-                time.sleep(1)
+            for i in range(14):
+                if i == 3:
+                    websocket_robot_state('autoRetrieve')
+                time.sleep(0.5)
                 if TEST_RESET: break
                 if RESET_ALL: break
             break
@@ -961,7 +963,16 @@ def filter_history_record(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
     except:
         return Response('error', status=status.HTTP_404_NOT_FOUND)
-    
+
+@api_view(['POST'])
+def clear_new_history_record(request):
+    try:
+        history = HistoryRecord.objects.filter(is_new=True)
+        history.update(is_new=False)
+        return Response('ok')
+    except: 
+        return Response('error')
+
 # qrcode
 
 # @api_view(['POST'])
