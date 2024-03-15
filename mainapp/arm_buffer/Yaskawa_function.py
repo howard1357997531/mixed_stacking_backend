@@ -157,8 +157,7 @@ def smart_pack(orderId):  ####智慧堆棧系統####
     posture2=[180.0,0.0,90.0]
     count_list=1
 ##########################################################################
-class Yaskawa_control():
-    
+class Yaskawa_control():   
     def __init__(self, ip ,port):
         self.server_ip = ip
         self.server_port = port
