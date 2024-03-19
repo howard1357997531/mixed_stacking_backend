@@ -449,6 +449,7 @@ def executeRobot(request):
         thread2 = threading.Thread(target=YASKAWA_ROBOT_BUFFER.Robot_Demo, args=(orderId, order_list, order_count, isFinish_queue))
         thread2.start()
         thread1.join(); thread2.join()
+        robot_state = "finish" if isFinish_queue.get() else "reset"
         '''
         # test
         # global TEST_RESET, TEST_RAUSE
@@ -461,17 +462,16 @@ def executeRobot(request):
         # time.sleep(4.1)
         # thread2.start()
         # thread1.join(); thread2.join()
-
-        # demo3 test
-        
-        robot_state = robot.supply_check(order_list)
         # '''
+
+        # demo3 test 
+        robot_state = robot.supply_check(order_list)
+        
         print(robot_state)
         print('RESET_ALL:', RESET_ALL)
+        
         if RESET_ALL:
             robot_state = 'reset_all'
-        # robot_state = "finish" if isFinish_queue.get() else "reset"
-        # robot_state = "finish" 
         print('python stop!!')
         
         return Response({"robot_state": robot_state}, status=status.HTTP_200_OK)
@@ -481,6 +481,7 @@ def executeRobot(request):
 @api_view(['POST'])
 def robotSetting(request):
     try:
+        global RESET_ALL, TEST_RESET, TEST_RAUSE
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
@@ -496,9 +497,12 @@ def robotSetting(request):
             YASKAWA_ROBOT_BUFFER.speed(robot_speed)
         elif mode == 'reset':
             YASKAWA_ROBOT_BUFFER.reset()
+        elif mode == 'reset_all':
+            RESET_ALL = True
+            YASKAWA_ROBOT_BUFFER.reset()
         '''
         # test
-        global TEST_RESET, TEST_RAUSE, RESET_ALL
+        
         if mode == 'pause':
             robot.robot_pause()
         elif mode == 'unPause':
@@ -511,9 +515,7 @@ def robotSetting(request):
             robot.robot_reset()
         elif mode == 'reset_all':
             RESET_ALL = True
-            robot.robot_reset()
-            print('reset_all')
-            
+            robot.robot_reset()     
         # '''
         return Response({'mode': mode}, status=status.HTTP_200_OK)
     except:
@@ -682,43 +684,43 @@ def parse_layer(data):
 @api_view(['POST'])
 def aiTraining(request):
     try:
-        worklist_id = request.data.get("orderId")
-        order = Order.objects.filter(id=int(worklist_id)).first()        
-        order.aiTraining_state = "is_training"
-        order.save()
-        unique_code = order.unique_code
+        # worklist_id = request.data.get("orderId")
+        # order = Order.objects.filter(id=int(worklist_id)).first()        
+        # order.aiTraining_state = "is_training"
+        # order.save()
+        # unique_code = order.unique_code
         
-        t1 = time.time()
-        '''
-        ai_calculate(worklist_id, unique_code)
-        '''
-        main_2d(worklist_id, unique_code)
-        main_3d(worklist_id, unique_code)
+        # t1 = time.time()
         # '''
-        t2 = time.time()
-        training_time = round(t2-t1, 3)
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
-        '''
-        ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # ai_calculate(worklist_id, unique_code)
         # '''
-        ai_df = pd.read_csv(ai_csvfile_path)
-        ai_list = ai_df['matched_box_name'].tolist()
-        ai_layer_count = ai_df['layer'].tolist()
-        aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
-        aiLayer_order = parse_layer(ai_layer_count)
-        order.aiTraining_order = aiResult_str
-        order.aiLayer_order = aiLayer_order
-        order.aiTraining_state = "finish_training"
-        order.save()
+        # main_2d(worklist_id, unique_code)
+        # main_3d(worklist_id, unique_code)
+        # # '''
+        # t2 = time.time()
+        # training_time = round(t2-t1, 3)
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_final.csv')
+        # '''
+        # ai_csvfile_path = os.path.join(settings.MEDIA_ROOT, f'ai_figure/Figures_{worklist_id}', f'box_positions_layer.csv')
+        # # '''
+        # ai_df = pd.read_csv(ai_csvfile_path)
+        # ai_list = ai_df['matched_box_name'].tolist()
+        # ai_layer_count = ai_df['layer'].tolist()
+        # aiResult_str = ','.join([ai.replace('#', '').replace('外箱', '') for ai in ai_list])
+        # aiLayer_order = parse_layer(ai_layer_count)
+        # order.aiTraining_order = aiResult_str
+        # order.aiLayer_order = aiLayer_order
+        # order.aiTraining_state = "finish_training"
+        # order.save()
 
         # test
-        # aiResult_str = "35,13,20,20,20,13,33,35,9,22,22,9,29,26,33,33,18A,29,29,7A,18A,22,18A,29,26,18A,7A,16A,13,33,7A,16A,13"
-        # aiLayer_order = '4,4,6,6,6,5,2'
-        # time.sleep(5)
-        # order.aiTraining_state = "no_training"
-        # order.save()
-        # print('ok')
+        aiResult_str = "35,13,20,20,20,13,33,35,9,22,22,9,29,26,33,33,18A,29,29,7A,18A,22,18A,29,26,18A,7A,16A,13,33,7A,16A,13"
+        aiLayer_order = '4,4,6,6,6,5,2'
+        time.sleep(5)
+        order.aiTraining_state = "no_training"
+        order.save()
+        print('ok')
         return Response({"aiResult_str": aiResult_str, "aiLayer_order": aiLayer_order}, status=status.HTTP_200_OK)
     except:
         worklist_id = request.data.get("orderId")
