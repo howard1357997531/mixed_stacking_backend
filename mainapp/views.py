@@ -422,7 +422,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        '''
+        # '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -465,10 +465,10 @@ def executeRobot(request):
         # '''
 
         # demo3 test 
-        robot_state = robot.supply_check(order_list)
+        # robot_state = robot.supply_check(order_list)
         
-        print(robot_state)
-        print('RESET_ALL:', RESET_ALL)
+        # print(robot_state)
+        # print('RESET_ALL:', RESET_ALL)
         
         if RESET_ALL:
             robot_state = 'reset_all'
@@ -485,7 +485,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        ''' 
+        # ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
