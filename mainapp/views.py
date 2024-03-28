@@ -422,7 +422,7 @@ def executeRobot(request):
         order_count = len(order_list)
         isFinish_queue = Queue()
         
-        # '''
+        '''
         YASKAWA_ROBOT_BUFFER = Yaskawa_control_buffer('192.168.1.15', 10040)
         # YASKAWA_ROBOT = Yaskawa_control('192.168.1.15', 10040)
         # KUKA_ROBOT = Kuka_control()
@@ -465,7 +465,7 @@ def executeRobot(request):
         # '''
 
         # demo3 test 
-        # robot_state = robot.supply_check(order_list)
+        robot_state = robot.supply_check(order_list)
         
         # print(robot_state)
         # print('RESET_ALL:', RESET_ALL)
@@ -485,7 +485,7 @@ def robotSetting(request):
         data = request.data
         mode = data.get('mode')
         # YASKAWA_ROBOT_BUFFER YASKAWA_ROBOT KUKA_ROBOT
-        # ''' 
+        ''' 
         if mode == 'pause':
             YASKAWA_ROBOT_BUFFER.pause()
         elif mode == 'unPause':
@@ -563,10 +563,14 @@ def executeRobotAutoRetrieve(request):
 def executeRobotFinish(request):
     try:
         data = request.data
-        datas, insert_index, reset_index = parse_execution_data(data.get('executeOrderStr'), data.get('resetIndex'))
+        # datas, insert_index, reset_index = parse_execution_data(data.get('executeOrderStr'), data.get('resetIndex'))
+        datas = data.get('datas')
+        insert_index = data.get('insertIndex')
+        reset_index = data.get('resetIndex')
+        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else 0
         start_time = data.get('startTime')
         end_time = datetime.now().strftime('%Y/%m/%d %H:%M')
-        reset_all_index = data.get('resetAllIndex') if data.get('resetAllIndex') is not None else 0
+
         name_list = []
         print('resetAll:', data)
         print(datas, insert_index, reset_index)
@@ -586,8 +590,8 @@ def executeRobotFinish(request):
         HistoryRecord.objects.create(
             name = ','.join(name_list),
             order_id = ','.join(datas),
-            insert_index = ','.join(map(str, insert_index)) if insert_index else "",
-            reset_index = ','.join(map(str, reset_index)) if reset_index else "",
+            insert_index = insert_index,
+            reset_index = reset_index,
             reset_all_index = str(reset_all_index),
             start_time = start_time,
             end_time = end_time,
